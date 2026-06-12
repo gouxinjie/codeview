@@ -598,7 +598,7 @@ function DashboardPage(): JSX.Element {
                 <div className="dashboard-language__chart">
                   <ReactECharts
                     option={buildLanguageDonutOption(languageDonutData)}
-                    style={{ height: 260 }}
+                    style={{ height: 196 }}
                     opts={{ renderer: 'svg' }}
                   />
                 </div>
@@ -1026,10 +1026,16 @@ function buildRepoBarOption(data: RepoActivityPoint[]): EChartsOption {
 }
 
 function normalizeLanguageDistribution(data: Array<{ name: string; value: number }>): LanguageDonutItem[] {
+  const visibleLimit = 6;
   const total = data.reduce((sum, item) => sum + item.value, 0);
-  const colorPalette = ['#c5e832', '#8fda6b', '#668cff', '#7d85ff', '#f4c44e', '#5ab8ff', '#ff965f', '#c6c9d2'];
+  const colorPalette = ['#c6e83a', '#58b4ff', '#4f7eff', '#7b87ff', '#f6a154', '#78c8ff', '#c3c9d4'];
 
-  return data.map((item, index) => ({
+  const sortedItems = [...data].sort((left, right) => right.value - left.value);
+  const mainItems = sortedItems.slice(0, visibleLimit);
+  const otherValue = sortedItems.slice(visibleLimit).reduce((sum, item) => sum + item.value, 0);
+  const normalizedItems = otherValue > 0 ? [...mainItems, { name: '其他', value: otherValue }] : mainItems;
+
+  return normalizedItems.map((item, index) => ({
     name: item.name,
     value: total > 0 ? Number(((item.value / total) * 100).toFixed(1)) : 0,
     color: colorPalette[index] ?? '#c6c9d2'
@@ -1050,24 +1056,55 @@ function buildLanguageDonutOption(data: LanguageDonutItem[]): EChartsOption {
       },
       formatter: '{b}<br />占比 {c}%'
     },
-    title: {
-      text: top ? `主要语言\n${top.name}\n${top.value.toFixed(1)}%` : '暂无数据',
-      left: 'center',
-      top: '36%',
-      textAlign: 'center',
-      textStyle: {
-        color: '#f3ebdd',
-        fontSize: 13,
-        fontWeight: 600,
-        lineHeight: 20
-      }
-    },
+    graphic: top
+      ? [
+          {
+            type: 'text',
+            left: 'center',
+            top: '41%',
+            silent: true,
+            style: {
+              text: '主要语言',
+              fill: '#88909b',
+              fontSize: 9,
+              fontWeight: 500,
+              align: 'center'
+            }
+          },
+          {
+            type: 'text',
+            left: 'center',
+            top: '49%',
+            silent: true,
+            style: {
+              text: top.name,
+              fill: '#f4f7fb',
+              fontSize: 12,
+              fontWeight: 700,
+              align: 'center'
+            }
+          },
+          {
+            type: 'text',
+            left: 'center',
+            top: '58%',
+            silent: true,
+            style: {
+              text: `${top.value.toFixed(1)}%`,
+              fill: '#d9dde4',
+              fontSize: 11,
+              fontWeight: 600,
+              align: 'center'
+            }
+          }
+        ]
+      : undefined,
     series: [
       {
         type: 'pie',
-        radius: ['54%', '78%'],
-        center: ['50%', '51%'],
-        startAngle: 95,
+        radius: ['53%', '78%'],
+        center: ['50%', '54%'],
+        startAngle: 88,
         avoidLabelOverlap: false,
         label: {
           show: false
@@ -1075,12 +1112,12 @@ function buildLanguageDonutOption(data: LanguageDonutItem[]): EChartsOption {
         emphasis: {
           scale: true,
           itemStyle: {
-            shadowBlur: 18,
-            shadowColor: 'rgba(181,255,53,0.22)'
+            shadowBlur: 14,
+            shadowColor: 'rgba(59,196,255,0.18)'
           }
         },
         itemStyle: {
-          borderColor: '#0f1317',
+          borderColor: '#091019',
           borderWidth: 2
         },
         data
