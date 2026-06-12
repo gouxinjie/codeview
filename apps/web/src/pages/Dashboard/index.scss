@@ -1,6 +1,8 @@
 /* 文件说明：参考图一比一重构后的 Dashboard 样式。 */
 /* 样式说明：强调工业感、密集信息层级和绿色高亮系统。 */
 /* 关键布局说明：顶部信息条、五张指标卡、三栏主面板和底部五张洞察卡。 */
+@use '../../styles/mixins' as mixins;
+
 .dashboard {
   display: flex;
   flex-direction: column;
@@ -11,15 +13,7 @@
 .dashboard__metrics,
 .dashboard-panel,
 .dashboard__banner-error {
-  border: 1px solid rgba(184, 255, 59, 0.08);
-  border-radius: 2px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0)),
-    linear-gradient(90deg, rgba(0, 80, 160, 0.05), transparent 42%),
-    rgba(9, 13, 16, 0.96);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.02),
-    0 0 0 1px rgba(5, 11, 14, 0.32);
+  @include mixins.panel-shell();
 }
 
 .dashboard__topbar {
@@ -212,30 +206,6 @@
 .dashboard-panel {
   padding: 10px 12px 12px;
   min-height: 100%;
-}
-
-.dashboard-panel__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.dashboard-panel__title {
-  margin: 0;
-  color: var(--color-accent);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.dashboard-panel__subtitle {
-  margin: 3px 0 0;
-  color: #d9ddd5;
-  font-size: 0.86rem;
-  font-weight: 600;
 }
 
 .dashboard-heatmap {
@@ -486,10 +456,8 @@
 .dashboard-repo__trend,
 .dashboard-stack__block {
   padding: 12px 0;
-  border-radius: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+
+  @include mixins.flat-surface();
 }
 
 .dashboard-repo__ranking {
@@ -932,64 +900,6 @@
   letter-spacing: 0.01em;
 }
 
-.dashboard-score-ring {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  padding: 5px;
-  box-shadow:
-    inset 0 0 0 1px rgba(184, 255, 59, 0.12),
-    0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 0 14px rgba(184, 255, 59, 0.08);
-}
-
-.dashboard-score-ring::before {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  pointer-events: none;
-}
-
-.dashboard-score-ring::after {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  border-radius: 50%;
-  background: repeating-conic-gradient(
-    from 210deg,
-    rgba(208, 255, 66, 0.7) 0deg 8deg,
-    transparent 8deg 26deg
-  );
-  opacity: 0.3;
-  pointer-events: none;
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 8px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 8px));
-}
-
-.dashboard-score-ring__inner {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.05), transparent 42%),
-    linear-gradient(180deg, rgba(12, 18, 24, 0.98), rgba(8, 12, 17, 0.98));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.03),
-    inset 0 0 0 1px rgba(18, 24, 32, 0.7);
-}
-
-.dashboard-score-ring__inner strong {
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #d6ff4e;
-}
-
 .dashboard-repo__detail-link {
   display: flex;
   align-items: center;
@@ -1135,13 +1045,6 @@
   padding-bottom: 10px;
 }
 
-.dashboard-insights-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
 .dashboard__insights {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1152,11 +1055,9 @@
 .dashboard-insight {
   min-height: 128px;
   padding: 14px 14px 12px;
-  border: 0;
   border-left: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+
+  @include mixins.flat-surface();
 }
 
 .dashboard-insight:first-child {

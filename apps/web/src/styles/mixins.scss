@@ -1,0 +1,66 @@
+@use 'sass:list';
+
+/* 文件说明：首页与项目详情页共用的 SCSS 变量、函数与混入。 */
+/* 样式说明：统一抽离面板底板、扁平化控件和分隔线列表项样式。 */
+/* 关键布局说明：通过 mixin 复用两页的视觉骨架，减少重复声明。 */
+
+$accent-rgb: 184, 255, 59;
+$panel-highlight-rgb: 0, 80, 160;
+$panel-shadow-rgb: 5, 11, 14;
+$panel-surface-rgb: 9, 13, 16;
+$white-rgb: 255, 255, 255;
+
+/**
+ * 函数说明：基于 RGB 通道列表生成带透明度的颜色值。
+ * 参数说明：`$channels` 为 RGB 三通道列表，`$opacity` 为透明度。
+ * 返回说明：返回可直接用于边框、背景和阴影的 rgba 颜色。
+ * author: gouxinjie
+ */
+@function alpha-color($channels, $opacity) {
+  @return rgb(
+    list.nth($channels, 1),
+    list.nth($channels, 2),
+    list.nth($channels, 3),
+    $opacity
+  );
+}
+
+/**
+ * 混入说明：统一面板容器的边框、背景和阴影表现。
+ * 参数说明：`$radius` 为面板圆角，默认值为 `2px`。
+ * author: gouxinjie
+ */
+@mixin panel-shell($radius: 2px) {
+  border: 1px solid alpha-color($accent-rgb, 0.08);
+  border-radius: $radius;
+  background:
+    linear-gradient(180deg, alpha-color($white-rgb, 0.02), rgba(0, 0, 0, 0)),
+    linear-gradient(90deg, alpha-color($panel-highlight-rgb, 0.05), transparent 42%),
+    alpha-color($panel-surface-rgb, 0.96);
+  box-shadow:
+    inset 0 1px 0 alpha-color($white-rgb, 0.02),
+    0 0 0 1px alpha-color($panel-shadow-rgb, 0.32);
+}
+
+/**
+ * 混入说明：清空卡片式容器的边框、圆角和阴影，保留扁平基底。
+ * 参数说明：`$border` 为边框值，`$radius` 为圆角值。
+ * author: gouxinjie
+ */
+@mixin flat-surface($border: 0, $radius: 0) {
+  border: $border;
+  border-radius: $radius;
+  background: transparent;
+  box-shadow: none;
+}
+
+/**
+ * 混入说明：生成带底部分隔线的列表项基础样式。
+ * 参数说明：`$border-color` 为分隔线颜色，`$radius` 为圆角值。
+ * author: gouxinjie
+ */
+@mixin divider-list-item($border-color: alpha-color($white-rgb, 0.06), $radius: 0) {
+  @include flat-surface(0, $radius);
+
+  border-bottom: 1px solid $border-color;
+}

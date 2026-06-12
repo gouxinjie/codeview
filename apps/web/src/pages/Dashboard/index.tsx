@@ -19,6 +19,8 @@ import {
 import { Link } from 'react-router-dom';
 import { EmptyState } from '../../components/commons/EmptyState';
 import { LoadingBlock } from '../../components/commons/LoadingBlock';
+import { PanelHeading } from '../../components/commons/PanelHeading';
+import { ScoreRing } from '../../components/commons/ScoreRing';
 import { useAppStore } from '../../store/appStore';
 import type {
   ConfigPayload,
@@ -39,6 +41,7 @@ import {
   triggerIncrementalSync
 } from '../../utils/api';
 import { formatDateTime, formatNumber, translateSyncStatus } from '../../utils/date';
+import { buildHeatmapMatrix, buildHeatmapMonthLabels, getLongestHeatmapStreak } from '../../utils/heatmap';
 import './index.scss';
 
 interface ConfigFormState extends ConfigPayload {
@@ -50,20 +53,6 @@ type MetricIconName = 'repos' | 'commits' | 'active' | 'views' | 'clones';
 type HeaderIconName = 'user' | 'clock' | 'sync' | 'success' | 'github' | 'settings';
 type InsightLevel = 'focus' | 'up' | 'risk';
 type TrendGranularity = 'day' | 'week' | 'month';
-
-interface HeatmapMatrixCell {
-  key: string;
-  date: string;
-  count: number;
-  column: number;
-  row: number;
-}
-
-interface HeatmapMatrixModel {
-  months: Array<{ label: string; column: number }>;
-  cells: HeatmapMatrixCell[];
-  maxValue: number;
-}
 
 interface LanguageDonutItem {
   name: string;
@@ -225,7 +214,10 @@ function DashboardPage(): JSX.Element {
 
   const heatmapModel = useMemo(() => buildHeatmapMatrix(overview?.personalHeatmap ?? []), [overview?.personalHeatmap]);
   const heatmapMonthLabels = useMemo(() => buildHeatmapMonthLabels(heatmapModel.months), [heatmapModel.months]);
-  const longestStreak = useMemo(() => getLongestStreak(overview?.personalHeatmap ?? []), [overview?.personalHeatmap]);
+  const longestStreak = useMemo(
+    () => getLongestHeatmapStreak(overview?.personalHeatmap ?? []),
+    [overview?.personalHeatmap]
+  );
   const activeDaysCurrentMonth = useMemo(
     () => getCurrentMonthActiveDays(overview?.personalHeatmap ?? []),
     [overview?.personalHeatmap]
@@ -386,7 +378,7 @@ function DashboardPage(): JSX.Element {
 
       <section className="dashboard__grid">
         <section className="dashboard-panel dashboard-panel--activity">
-          <PanelHeading title="ACTIVITY MATRIX" subtitle="个人活动矩阵" />
+          <PanelHeading variant="dashboard" eyebrow="ACTIVITY MATRIX" title="个人活动矩阵" />
 
           <div className="dashboard-heatmap">
             <div className="dashboard-heatmap__header">
@@ -455,7 +447,7 @@ function DashboardPage(): JSX.Element {
         </section>
 
         <section className="dashboard-panel dashboard-panel--repo">
-          <PanelHeading title="REPO OPERATIONS" subtitle="项目运营中心" />
+          <PanelHeading variant="dashboard" eyebrow="REPO OPERATIONS" title="项目运营中心" />
 
           <div className="dashboard-repo">
             <div className="dashboard-repo__ranking">
@@ -554,7 +546,7 @@ function DashboardPage(): JSX.Element {
                   <div className="dashboard-repo__detail-footer">
                     <div className="dashboard-repo__detail-score">
                       <span className="dashboard-repo__detail-score-label">综合评分</span>
-                      <ScoreRing score={featuredRepo.score} />
+                      <ScoreRing variant="dashboard" score={featuredRepo.score} />
                     </div>
                     <Link className="dashboard-repo__detail-link" to={`/repos/${featuredRepo.id}`}>
                       <span>查看详情</span>
@@ -597,7 +589,7 @@ function DashboardPage(): JSX.Element {
         </section>
 
         <section className="dashboard-panel dashboard-panel--stack">
-          <PanelHeading title="STACK PROFILE" subtitle="技术栈看板" />
+          <PanelHeading variant="dashboard" eyebrow="STACK PROFILE" title="技术栈看板" />
 
           <div className="dashboard-stack__block">
             <div className="dashboard-stack__block-title">语言占比（按字节数）</div>
@@ -650,12 +642,7 @@ function DashboardPage(): JSX.Element {
       </section>
 
       <section className="dashboard-panel dashboard-insights-panel">
-        <header className="dashboard-insights-panel__header">
-          <div>
-            <p className="dashboard-panel__title">INSIGHTS</p>
-            <h2 className="dashboard-panel__subtitle">智能洞察</h2>
-          </div>
-        </header>
+        <PanelHeading variant="dashboard" eyebrow="INSIGHTS" title="智能洞察" />
         <section className="dashboard__insights">
           {insights.slice(0, 5).map((item) => (
             <article key={item.id} className="dashboard-insight">
@@ -827,24 +814,6 @@ function TopInfoCell(props: {
   );
 }
 
-function PanelHeading(props: {
-  title: string;
-  subtitle: string;
-  accessory?: JSX.Element;
-}): JSX.Element {
-  const { title, subtitle, accessory } = props;
-
-  return (
-    <header className="dashboard-panel__header">
-      <div>
-        <p className="dashboard-panel__title">{title}</p>
-        <h2 className="dashboard-panel__subtitle">{subtitle}</h2>
-      </div>
-      {accessory}
-    </header>
-  );
-}
-
 function ActivityStatCard(props: { label: string; value: string; hint: string }): JSX.Element {
   const { label, value, hint } = props;
 
@@ -864,24 +833,6 @@ function RepoMetricCell(props: { label: string; value: string; compact?: boolean
     <div className={compact ? 'dashboard-repo__detail-metric dashboard-repo__detail-metric--compact' : 'dashboard-repo__detail-metric'}>
       <span>{label}</span>
       <strong>{value}</strong>
-    </div>
-  );
-}
-
-function ScoreRing(props: { score: number }): JSX.Element {
-  const { score } = props;
-  const normalizedScore = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
-
-  return (
-    <div
-      className="dashboard-score-ring"
-      style={{
-        background: `conic-gradient(from 212deg, rgba(255,255,255,0.08) 0deg ${360 - normalizedScore * 3.6}deg, #b5ff35 ${360 - normalizedScore * 3.6}deg 360deg)`
-      }}
-    >
-      <div className="dashboard-score-ring__inner">
-        <strong>{normalizedScore.toFixed(1)}</strong>
-      </div>
     </div>
   );
 }
@@ -1206,66 +1157,6 @@ function buildStackProjectionOption(series: Array<{ name: string; values: number
   };
 }
 
-function buildHeatmapMatrix(data: HeatmapCell[]): HeatmapMatrixModel {
-  const end = new Date();
-  const normalizedEnd = new Date(end);
-  const day = normalizedEnd.getDay();
-  const weekOffset = day === 0 ? 6 : day - 1;
-  normalizedEnd.setDate(normalizedEnd.getDate() + (6 - weekOffset));
-
-  const start = new Date(normalizedEnd);
-  start.setDate(normalizedEnd.getDate() - 52 * 7 - 6);
-
-  const dataMap = new Map<string, number>();
-  let maxValue = 0;
-
-  data.forEach((item) => {
-    dataMap.set(item.date, item.count);
-    if (item.count > maxValue) {
-      maxValue = item.count;
-    }
-  });
-
-  const cells: HeatmapMatrixCell[] = [];
-  const months: Array<{ label: string; column: number }> = [];
-  const monthSet = new Set<string>();
-
-  for (let column = 0; column < 53; column += 1) {
-    for (let row = 0; row < 7; row += 1) {
-      const current = new Date(start);
-      current.setDate(start.getDate() + column * 7 + row);
-      const date = current.toISOString().slice(0, 10);
-      const count = dataMap.get(date) ?? 0;
-      const monthLabel = `${current.getMonth() + 1}月`;
-      const monthKey = `${current.getFullYear()}-${current.getMonth()}`;
-
-      if (current.getDate() <= 7 && !monthSet.has(monthKey)) {
-        monthSet.add(monthKey);
-        months.push({ label: monthLabel, column });
-      }
-
-      cells.push({
-        key: `${date}-${column}-${row}`,
-        date,
-        count,
-        column,
-        row
-      });
-    }
-  }
-
-  return {
-    months,
-    cells,
-    maxValue
-  };
-}
-
-function buildHeatmapMonthLabels(months: Array<{ label: string; column: number }>): string[] {
-  const labels = months.map((item) => item.label);
-  return labels.slice(-12);
-}
-
 function getHeatLevelClass(value: number, maxValue: number): string {
   if (value <= 0 || maxValue <= 0) {
     return 'dashboard-heatmap__cell dashboard-heatmap__cell--0';
@@ -1290,23 +1181,6 @@ function getHeatLevelClass(value: number, maxValue: number): string {
   }
 
   return 'dashboard-heatmap__cell dashboard-heatmap__cell--1';
-}
-
-function getLongestStreak(data: HeatmapCell[]): number {
-  const sorted = [...data].sort((left, right) => left.date.localeCompare(right.date));
-  let longest = 0;
-  let current = 0;
-
-  sorted.forEach((item) => {
-    if (item.count > 0) {
-      current += 1;
-      longest = Math.max(longest, current);
-    } else {
-      current = 0;
-    }
-  });
-
-  return longest;
 }
 
 function getCurrentMonthActiveDays(data: HeatmapCell[]): number {

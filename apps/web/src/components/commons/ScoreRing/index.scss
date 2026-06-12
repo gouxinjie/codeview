@@ -1,0 +1,95 @@
+/* 文件说明：通用评分环组件样式。 */
+/* 样式说明：统一首页与项目详情页的圆环评分结构，按 variant 控制尺寸与视觉。 */
+/* 关键布局说明：使用公共容器承载不同页面的圆环底盘和内层文本。 */
+
+.score-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.score-ring__inner {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  text-align: center;
+}
+
+.score-ring__value {
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.score-ring__suffix {
+  display: block;
+}
+
+.score-ring--dashboard {
+  width: 60px;
+  height: 60px;
+  padding: 5px;
+  box-shadow:
+    inset 0 0 0 1px rgba(184, 255, 59, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 0 14px rgba(184, 255, 59, 0.08);
+}
+
+.score-ring--dashboard::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.score-ring--dashboard::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 210deg, rgba(208, 255, 66, 0.7) 0deg 8deg, transparent 8deg 26deg);
+  opacity: 0.3;
+  pointer-events: none;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 8px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 8px));
+}
+
+.score-ring--dashboard .score-ring__inner {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.05), transparent 42%),
+    linear-gradient(180deg, rgba(12, 18, 24, 0.98), rgba(8, 12, 17, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 0 0 1px rgba(18, 24, 32, 0.7);
+}
+
+.score-ring--dashboard .score-ring__value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #d6ff4e;
+}
+
+.score-ring--detail {
+  width: 124px;
+  height: 124px;
+  padding: 10px;
+}
+
+.score-ring--detail .score-ring__inner {
+  background: #0d1114;
+}
+
+.score-ring--detail .score-ring__value {
+  font-size: 2rem;
+  color: var(--color-accent);
+}
+
+.score-ring--detail .score-ring__suffix {
+  margin-top: 4px;
+  color: #7d8779;
+  font-size: 0.72rem;
+}

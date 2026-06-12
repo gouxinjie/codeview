@@ -4,6 +4,8 @@ import ReactECharts from 'echarts-for-react';
 import { Link, useParams } from 'react-router-dom';
 import { EmptyState } from '../../components/commons/EmptyState';
 import { LoadingBlock } from '../../components/commons/LoadingBlock';
+import { PanelHeading } from '../../components/commons/PanelHeading';
+import { ScoreRing } from '../../components/commons/ScoreRing';
 import type {
   HeatmapCell,
   RepoActivityPoint,
@@ -21,6 +23,7 @@ import {
   fetchRepositoryTraffic
 } from '../../utils/api';
 import { formatDateTime, formatNumber } from '../../utils/date';
+import { buildHeatmapMatrix, getLongestHeatmapStreak, sumHeatmapCount } from '../../utils/heatmap';
 import './index.scss';
 
 type TrendGranularity = 'day' | 'week' | 'month';
@@ -54,25 +57,6 @@ interface RecommendationItem {
   level: RecommendationLevel;
   title: string;
   summary: string;
-}
-
-interface HeatmapMatrixCell {
-  key: string;
-  date: string;
-  count: number;
-  column: number;
-  row: number;
-}
-
-interface HeatmapMatrixModel {
-  months: Array<{ label: string; column: number }>;
-  cells: HeatmapMatrixCell[];
-  maxValue: number;
-}
-
-interface PanelHeadingProps {
-  title: string;
-  extra?: JSX.Element;
 }
 
 interface HeroFieldProps {
@@ -388,7 +372,7 @@ function RepositoryDetailPage(): JSX.Element {
           <section className="repo-detail-hero__score">
             <div className="repo-detail-hero__score-panel">
               <span className="repo-detail-hero__score-label">项目评分</span>
-              <ScoreRing score={detail.score} />
+              <ScoreRing variant="detail" score={detail.score} suffix="/100" />
             </div>
 
             <div className="repo-detail-hero__score-bars">
@@ -421,14 +405,16 @@ function RepositoryDetailPage(): JSX.Element {
       <section className="repo-detail-grid repo-detail-grid--primary">
         <article className="repo-detail-panel repo-detail-panel--trend">
           <PanelHeading
+            variant="detail"
             title="提交趋势"
-            extra={
+            accessory={
               <div className="repo-detail-panel__heading-controls">
                 <button type="button" className="repo-detail-panel__range-button">
                   近 30 天
                 </button>
               </div>
             }
+            corner={<ChevronRightIcon />}
           />
 
           <div className="repo-detail-panel__tab-group">
@@ -467,8 +453,9 @@ function RepositoryDetailPage(): JSX.Element {
 
         <article className="repo-detail-panel repo-detail-panel--heatmap">
           <PanelHeading
+            variant="detail"
             title="提交热力图（近 1 年）"
-            extra={
+            accessory={
               <div className="repo-detail-heatmap__legend">
                 <span>少</span>
                 <span className="repo-detail-heatmap__legend-scale" aria-hidden="true">
@@ -479,6 +466,7 @@ function RepositoryDetailPage(): JSX.Element {
                 <span>多</span>
               </div>
             }
+            corner={<ChevronRightIcon />}
           />
 
           {heatmap.length > 0 ? (
@@ -527,8 +515,9 @@ function RepositoryDetailPage(): JSX.Element {
 
         <article className="repo-detail-panel repo-detail-panel--stack">
           <PanelHeading
+            variant="detail"
             title="技术栈识别结果"
-            extra={
+            accessory={
               <div className="repo-detail-panel__mini-tabs">
                 {STACK_TABS.map((item, index) => (
                   <span
@@ -544,6 +533,7 @@ function RepositoryDetailPage(): JSX.Element {
                 ))}
               </div>
             }
+            corner={<ChevronRightIcon />}
           />
 
           {detail.languages.length > 0 ? (
@@ -585,7 +575,7 @@ function RepositoryDetailPage(): JSX.Element {
 
       <section className="repo-detail-grid repo-detail-grid--secondary">
         <article className="repo-detail-panel repo-detail-panel--traffic">
-          <PanelHeading title="经营数据（近 14 天）" />
+          <PanelHeading variant="detail" title="经营数据（近 14 天）" corner={<ChevronRightIcon />} />
 
           <div className="repo-detail-traffic__metrics">
             {trafficMetrics.map((item) => (
@@ -611,7 +601,7 @@ function RepositoryDetailPage(): JSX.Element {
         </article>
 
         <article className="repo-detail-panel repo-detail-panel--versions">
-          <PanelHeading title="版本快照记录" />
+          <PanelHeading variant="detail" title="版本快照记录" corner={<ChevronRightIcon />} />
 
           <div className="repo-detail-list repo-detail-list--versions">
             {versionSnapshots.length > 0 ? (
@@ -638,7 +628,7 @@ function RepositoryDetailPage(): JSX.Element {
         </article>
 
         <article className="repo-detail-panel repo-detail-panel--commits">
-          <PanelHeading title="最近提交记录" />
+          <PanelHeading variant="detail" title="最近提交记录" corner={<ChevronRightIcon />} />
 
           <div className="repo-detail-commit-list">
             {recentCommits.length > 0 ? (
@@ -664,13 +654,15 @@ function RepositoryDetailPage(): JSX.Element {
 
         <article className="repo-detail-panel repo-detail-panel--insights">
           <PanelHeading
+            variant="detail"
             title="洞察与建议（自动生成）"
-            extra={
+            accessory={
               <div className="repo-detail-panel__mode-tabs">
                 <span className="repo-detail-panel__mode-tab repo-detail-panel__mode-tab--active">自动</span>
                 <span className="repo-detail-panel__mode-tab">规则</span>
               </div>
             }
+            corner={<ChevronRightIcon />}
           />
 
           <div className="repo-detail-insight-list">
@@ -696,22 +688,6 @@ function RepositoryDetailPage(): JSX.Element {
         </article>
       </section>
     </div>
-  );
-}
-
-function PanelHeading(props: PanelHeadingProps): JSX.Element {
-  const { title, extra } = props;
-
-  return (
-    <header className="repo-detail-panel__header">
-      <h2 className="repo-detail-panel__title">{title}</h2>
-      <div className="repo-detail-panel__header-side">
-        {extra}
-        <span className="repo-detail-panel__header-corner" aria-hidden="true">
-          <ChevronRightIcon />
-        </span>
-      </div>
-    </header>
   );
 }
 
@@ -751,25 +727,6 @@ function TrendMetric(props: TrendMetricProps): JSX.Element {
       <span>{label}</span>
       <strong>{value}</strong>
       <small>{hint}</small>
-    </div>
-  );
-}
-
-function ScoreRing(props: { score: number }): JSX.Element {
-  const { score } = props;
-  const normalizedScore = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
-
-  return (
-    <div
-      className="repo-detail-hero__score-ring"
-      style={{
-        background: `conic-gradient(#b8ff3b 0deg ${normalizedScore * 3.6}deg, rgba(255,255,255,0.08) ${normalizedScore * 3.6}deg 360deg)`
-      }}
-    >
-      <div className="repo-detail-hero__score-ring-inner">
-        <strong>{normalizedScore.toFixed(1)}</strong>
-        <span>/100</span>
-      </div>
     </div>
   );
 }
@@ -1103,63 +1060,6 @@ function buildRepositoryLanguageDonutOption(
   };
 }
 
-function buildHeatmapMatrix(data: HeatmapCell[]): HeatmapMatrixModel {
-  const end = new Date();
-  const normalizedEnd = new Date(end);
-  const day = normalizedEnd.getDay();
-  const weekOffset = day === 0 ? 6 : day - 1;
-  normalizedEnd.setDate(normalizedEnd.getDate() + (6 - weekOffset));
-
-  const start = new Date(normalizedEnd);
-  start.setDate(normalizedEnd.getDate() - 52 * 7 - 6);
-
-  const dataMap = new Map<string, number>();
-  let maxValue = 0;
-
-  data.forEach((item) => {
-    dataMap.set(item.date, item.count);
-    if (item.count > maxValue) {
-      maxValue = item.count;
-    }
-  });
-
-  const cells: HeatmapMatrixCell[] = [];
-  const months: Array<{ label: string; column: number }> = [];
-  const monthSet = new Set<string>();
-
-  for (let column = 0; column < 53; column += 1) {
-    for (let row = 0; row < 7; row += 1) {
-      const current = new Date(start);
-      current.setDate(start.getDate() + column * 7 + row);
-      const date = current.toISOString().slice(0, 10);
-      const count = dataMap.get(date) ?? 0;
-      const monthKey = `${current.getFullYear()}-${current.getMonth()}`;
-
-      if (current.getDate() <= 7 && !monthSet.has(monthKey)) {
-        monthSet.add(monthKey);
-        months.push({
-          label: `${current.getMonth() + 1}月`,
-          column
-        });
-      }
-
-      cells.push({
-        key: `${date}-${column}-${row}`,
-        date,
-        count,
-        column,
-        row
-      });
-    }
-  }
-
-  return {
-    months: months.slice(-12),
-    cells,
-    maxValue
-  };
-}
-
 function buildVersionSnapshots(
   monthActivity: RepoActivityPoint[],
   files: Array<{ filePath: string }>
@@ -1190,27 +1090,6 @@ function buildVersionSnapshots(
 
 function sumActivityCount(data: RepoActivityPoint[]): number {
   return data.reduce((sum, item) => sum + item.count, 0);
-}
-
-function sumHeatmapCount(data: HeatmapCell[]): number {
-  return data.reduce((sum, item) => sum + item.count, 0);
-}
-
-function getLongestHeatmapStreak(data: HeatmapCell[]): number {
-  const sorted = [...data].sort((left, right) => left.date.localeCompare(right.date));
-  let longest = 0;
-  let current = 0;
-
-  sorted.forEach((item) => {
-    if (item.count > 0) {
-      current += 1;
-      longest = Math.max(longest, current);
-    } else {
-      current = 0;
-    }
-  });
-
-  return longest;
 }
 
 function getHeatmapCellClass(value: number, maxValue: number): string {

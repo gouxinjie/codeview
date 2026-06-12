@@ -1,0 +1,96 @@
+/* 文件说明：通用区块标题组件样式。 */
+/* 样式说明：统一 Dashboard 与项目详情页的标题头布局和层级。 */
+/* 关键布局说明：通过 variant 区分双行标题和单行标题两种结构。 */
+
+@use '../../../styles/mixins' as mixins;
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-heading__main {
+  min-width: 0;
+}
+
+.panel-heading__eyebrow {
+  margin: 0;
+}
+
+.panel-heading__title {
+  margin: 0;
+}
+
+.panel-heading__side {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-heading__corner {
+  width: 20px;
+  height: 20px;
+  color: #6e786a;
+  display: grid;
+  place-items: center;
+
+  @include mixins.flat-surface();
+}
+
+.panel-heading__corner svg {
+  width: 12px;
+  height: 12px;
+}
+
+.panel-heading--dashboard {
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.panel-heading--dashboard .panel-heading__eyebrow {
+  color: var(--color-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.panel-heading--dashboard .panel-heading__title {
+  margin-top: 3px;
+  color: #d9ddd5;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.panel-heading--detail {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.panel-heading--detail .panel-heading__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.panel-heading--statistics {
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.panel-heading--statistics .panel-heading__title {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .panel-heading--detail {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .panel-heading--detail .panel-heading__side {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
