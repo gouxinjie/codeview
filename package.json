@@ -2,6 +2,7 @@
   "name": "asset-console",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "workspaces": [
     "apps/server",
     "apps/web"
@@ -18,4 +19,3 @@
     "typescript": "^5.8.3"
   }
 }
-
