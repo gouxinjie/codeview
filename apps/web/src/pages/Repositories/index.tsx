@@ -1,4 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  Activity,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  FolderGit2,
+  LayoutGrid,
+  List,
+  RotateCcw,
+  Search,
+  Sparkles,
+  Star
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmptyState } from '../../components/commons/EmptyState';
 import { LoadingBlock } from '../../components/commons/LoadingBlock';
@@ -13,6 +26,19 @@ type RepositoryViewMode = 'grid' | 'list';
 type RepositoryPageSize = 12 | 24 | 48;
 
 const PAGE_SIZE_OPTIONS: RepositoryPageSize[] = [12, 24, 48];
+
+interface FilterSelectProps {
+  label: string;
+  value: string;
+  options: FilterSelectOption[];
+  onChange: (value: string) => void;
+  className?: string;
+}
+
+interface FilterSelectOption {
+  value: string;
+  label: string;
+}
 
 /**
  * 页面说明：项目列表页。
@@ -143,6 +169,36 @@ function RepositoriesPage(): JSX.Element {
   }, [currentPage, pageSize, sortedRepositories]);
 
   const pageNumbers = useMemo(() => buildPageNumbers(currentPage, pageCount), [currentPage, pageCount]);
+  const sortOptions = useMemo<FilterSelectOption[]>(
+    () => [
+      { value: 'score', label: '综合评分' },
+      { value: 'activity', label: '活跃度' },
+      { value: 'updated', label: '最近更新' },
+      { value: 'stars', label: '星标数' }
+    ],
+    []
+  );
+  const activityOptions = useMemo<FilterSelectOption[]>(
+    () => [
+      { value: 'all', label: '全部' },
+      { value: 'high', label: '高活跃' },
+      { value: 'medium', label: '中活跃' },
+      { value: 'low', label: '低活跃' }
+    ],
+    []
+  );
+  const stackTagOptions = useMemo<FilterSelectOption[]>(
+    () => [{ value: '', label: '全部' }, ...stackTags.map((item) => ({ value: item, label: item }))],
+    [stackTags]
+  );
+  const languageOptions = useMemo<FilterSelectOption[]>(
+    () => [{ value: '', label: '全部' }, ...languages.map((item) => ({ value: item, label: item }))],
+    [languages]
+  );
+  const pageSizeOptions = useMemo<FilterSelectOption[]>(
+    () => PAGE_SIZE_OPTIONS.map((item) => ({ value: String(item), label: `${item} 条` })),
+    []
+  );
 
   const resetFilters = (): void => {
     setSearch('');
@@ -172,7 +228,7 @@ function RepositoriesPage(): JSX.Element {
         <div className="repositories-page__toolbar">
           <label className="repositories-page__search">
             <span className="repositories-page__search-icon">
-              <SearchIcon />
+              <Search aria-hidden="true" strokeWidth={1.7} />
             </span>
             <input
               value={search}
@@ -181,55 +237,26 @@ function RepositoriesPage(): JSX.Element {
             />
           </label>
 
-          <label className="repositories-page__select">
-            <span className="repositories-page__select-label">排序方式</span>
-            <select value={sortMode} onChange={(event) => setSortMode(event.target.value as RepositorySortMode)}>
-              <option value="score">综合评分</option>
-              <option value="activity">活跃度</option>
-              <option value="updated">最近更新</option>
-              <option value="stars">星标数</option>
-            </select>
-          </label>
+          <FilterSelect
+            label="排序方式"
+            value={sortMode}
+            options={sortOptions}
+            onChange={(value) => setSortMode(value as RepositorySortMode)}
+          />
 
-          <label className="repositories-page__select">
-            <span className="repositories-page__select-label">活跃度</span>
-            <select
-              value={activityFilter}
-              onChange={(event) => setActivityFilter(event.target.value as RepositoryActivityFilter)}
-            >
-              <option value="all">全部</option>
-              <option value="high">高活跃</option>
-              <option value="medium">中活跃</option>
-              <option value="low">低活跃</option>
-            </select>
-          </label>
+          <FilterSelect
+            label="活跃度"
+            value={activityFilter}
+            options={activityOptions}
+            onChange={(value) => setActivityFilter(value as RepositoryActivityFilter)}
+          />
 
-          <label className="repositories-page__select">
-            <span className="repositories-page__select-label">技术栈</span>
-            <select value={stackTag} onChange={(event) => setStackTag(event.target.value)}>
-              <option value="">全部</option>
-              {stackTags.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FilterSelect label="技术栈" value={stackTag} options={stackTagOptions} onChange={setStackTag} />
 
-          <label className="repositories-page__select">
-            <span className="repositories-page__select-label">语言</span>
-            <select value={language} onChange={(event) => setLanguage(event.target.value)}>
-              <option value="">全部</option>
-              {languages.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FilterSelect label="语言" value={language} options={languageOptions} onChange={setLanguage} />
 
           <button type="button" className="repositories-page__reset" onClick={resetFilters}>
-            <ResetIcon />
+            <RotateCcw aria-hidden="true" strokeWidth={1.7} />
             <span>重置筛选</span>
           </button>
         </div>
@@ -245,7 +272,7 @@ function RepositoriesPage(): JSX.Element {
               }
               onClick={() => setViewMode('grid')}
             >
-              <GridIcon />
+              <LayoutGrid aria-hidden="true" strokeWidth={1.7} />
             </button>
             <button
               type="button"
@@ -256,7 +283,7 @@ function RepositoriesPage(): JSX.Element {
               }
               onClick={() => setViewMode('list')}
             >
-              <ListIcon />
+              <List aria-hidden="true" strokeWidth={1.7} />
             </button>
           </div>
         </div>
@@ -279,7 +306,7 @@ function RepositoriesPage(): JSX.Element {
                   <span className="repository-card__index">{(currentPage - 1) * pageSize + index + 1}</span>
                   <div className="repository-card__identity">
                     <div className="repository-card__icon">
-                      <RepoIcon />
+                      <FolderGit2 aria-hidden="true" strokeWidth={1.7} />
                     </div>
                     <div className="repository-card__title-wrap">
                       <strong className="repository-card__title">{item.name}</strong>
@@ -315,15 +342,15 @@ function RepositoriesPage(): JSX.Element {
 
                 <div className="repository-card__footer">
                   <span className="repository-card__meta-item">
-                    <StarIcon />
+                    <Star aria-hidden="true" strokeWidth={1.7} />
                     {formatNumber(item.starsCount)}
                   </span>
                   <span className="repository-card__meta-item">
-                    <PulseIcon />
+                    <Activity aria-hidden="true" strokeWidth={1.7} />
                     {item.mainLanguage || '--'}
                   </span>
                   <span className="repository-card__meta-item">
-                    <ScoreIcon />
+                    <Sparkles aria-hidden="true" strokeWidth={1.7} />
                     {item.score.toFixed(1)}
                   </span>
                 </div>
@@ -336,7 +363,7 @@ function RepositoriesPage(): JSX.Element {
 
             <div className="repositories-page__pagination-main">
               <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>
-                <ArrowLeftIcon />
+                <ChevronLeft aria-hidden="true" strokeWidth={1.8} />
               </button>
 
               {pageNumbers.map((item, index) =>
@@ -365,23 +392,17 @@ function RepositoriesPage(): JSX.Element {
                 disabled={currentPage === pageCount}
                 onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}
               >
-                <ArrowRightIcon />
+                <ChevronRight aria-hidden="true" strokeWidth={1.8} />
               </button>
             </div>
 
-            <label className="repositories-page__page-size">
-              <span>每页显示</span>
-              <select
-                value={pageSize}
-                onChange={(event) => setPageSize(Number(event.target.value) as RepositoryPageSize)}
-              >
-                {PAGE_SIZE_OPTIONS.map((item) => (
-                  <option key={item} value={item}>
-                    {item} 条
-                  </option>
-                ))}
-              </select>
-            </label>
+            <FilterSelect
+              className="repositories-page__page-size"
+              label="每页显示"
+              value={String(pageSize)}
+              options={pageSizeOptions}
+              onChange={(value) => setPageSize(Number(value) as RepositoryPageSize)}
+            />
           </footer>
         </>
       )}
@@ -405,89 +426,192 @@ function RepoScoreBadge(props: { score: number }): JSX.Element {
   );
 }
 
-function RepoIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3.4 4.5 7.5v9L12 20.6l7.5-4.1v-9L12 3.4Z" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M4.5 7.5 12 11l7.5-3.5M12 11v9.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
+function FilterSelect(props: FilterSelectProps): JSX.Element {
+  const { className, label, onChange, options, value } = props;
+  const [open, setOpen] = useState<boolean>(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const optionRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const listboxId = useId();
+  const currentOption = options.find((item) => item.value === value) ?? options[0];
+  const selectedIndex = Math.max(
+    0,
+    options.findIndex((item) => item.value === value)
   );
-}
+  const [activeIndex, setActiveIndex] = useState<number>(selectedIndex);
 
-function SearchIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="11" cy="11" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path d="m15.5 15.5 4 4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
+  const openMenu = (nextIndex: number): void => {
+    setActiveIndex(nextIndex);
+    setOpen(true);
+  };
 
-function ResetIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7.4 7.5H11V4M8 7A6.7 6.7 0 1 1 6 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+  const closeMenu = (): void => {
+    setOpen(false);
+    setActiveIndex(selectedIndex);
+  };
 
-function GridIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z" fill="none" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
-  );
-}
+  const selectOption = (nextValue: string): void => {
+    onChange(nextValue);
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
 
-function ListIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7 7h12M7 12h12M7 17h12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <circle cx="4" cy="7" r="1.1" fill="currentColor" />
-      <circle cx="4" cy="12" r="1.1" fill="currentColor" />
-      <circle cx="4" cy="17" r="1.1" fill="currentColor" />
-    </svg>
-  );
-}
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
 
-function StarIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m12 4.8 2 4 4.4.6-3.2 3.1.8 4.4L12 14.8 8 16.9l.8-4.4-3.2-3.1 4.4-.6 2-4Z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-    </svg>
-  );
-}
+    const handlePointerDown = (event: MouseEvent): void => {
+      if (!(event.target instanceof Node)) {
+        return;
+      }
 
-function PulseIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4.5 12h3.5l2-4.4 3.1 9 2.2-5h4.2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+      if (!rootRef.current?.contains(event.target)) {
+        closeMenu();
+      }
+    };
 
-function ScoreIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M12 8.3v3.9l2.7 1.4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
+    const handleEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        closeMenu();
+        triggerRef.current?.focus();
+      }
+    };
 
-function ArrowLeftIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m14.5 6.5-5 5 5 5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
 
-function ArrowRightIcon(): JSX.Element {
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setActiveIndex(selectedIndex);
+    menuRef.current?.focus();
+  }, [open, selectedIndex]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const activeOption = optionRefs.current[activeIndex];
+    activeOption?.scrollIntoView({
+      block: 'nearest'
+    });
+  }, [activeIndex, open]);
+
+  const moveActiveIndex = (direction: -1 | 1): void => {
+    setActiveIndex((current) => {
+      const nextIndex = current + direction;
+
+      if (nextIndex < 0) {
+        return options.length - 1;
+      }
+
+      if (nextIndex >= options.length) {
+        return 0;
+      }
+
+      return nextIndex;
+    });
+  };
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m9.5 6.5 5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <div ref={rootRef} className={className ? `repositories-page__select ${className}` : 'repositories-page__select'}>
+      <span className="repositories-page__select-label">{label}</span>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={open ? 'repositories-page__select-trigger repositories-page__select-trigger--open' : 'repositories-page__select-trigger'}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-controls={listboxId}
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            openMenu(event.key === 'ArrowDown' ? selectedIndex : Math.max(0, selectedIndex));
+          }
+
+          if ((event.key === 'Enter' || event.key === ' ') && !open) {
+            event.preventDefault();
+            openMenu(selectedIndex);
+          }
+        }}
+      >
+        <span className="repositories-page__select-value">{currentOption?.label ?? ''}</span>
+        <span className="repositories-page__select-arrow" aria-hidden="true">
+          <ChevronDown strokeWidth={1.7} />
+        </span>
+      </button>
+      {open ? (
+        <div
+          id={listboxId}
+          ref={menuRef}
+          className="repositories-page__select-menu"
+          role="listbox"
+          tabIndex={-1}
+          aria-label={label}
+          aria-activedescendant={`${listboxId}-option-${activeIndex}`}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              moveActiveIndex(1);
+            }
+
+            if (event.key === 'ArrowUp') {
+              event.preventDefault();
+              moveActiveIndex(-1);
+            }
+
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              selectOption(options[activeIndex]?.value ?? currentOption?.value ?? value);
+            }
+
+            if (event.key === 'Tab') {
+              closeMenu();
+            }
+          }}
+        >
+          {options.map((item, index) => (
+            <div
+              ref={(node) => {
+                optionRefs.current[index] = node;
+              }}
+              id={`${listboxId}-option-${index}`}
+              key={`${label}-${item.value || 'empty'}`}
+              role="option"
+              aria-selected={item.value === value}
+              className={
+                index === activeIndex
+                  ? item.value === value
+                    ? 'repositories-page__select-option repositories-page__select-option--active repositories-page__select-option--focused'
+                    : 'repositories-page__select-option repositories-page__select-option--focused'
+                  : item.value === value
+                    ? 'repositories-page__select-option repositories-page__select-option--active'
+                    : 'repositories-page__select-option'
+              }
+              onMouseEnter={() => setActiveIndex(index)}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                selectOption(item.value);
+              }}
+            >
+              {item.label}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
