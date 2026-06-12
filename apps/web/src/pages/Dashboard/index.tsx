@@ -25,6 +25,7 @@ import type {
   HeatmapCell,
   InsightCard,
   OverviewData,
+  RankingItem,
   RepoActivityPoint,
   RepoDetail
 } from '../../types/api';
@@ -62,6 +63,12 @@ interface HeatmapMatrixModel {
   months: Array<{ label: string; column: number }>;
   cells: HeatmapMatrixCell[];
   maxValue: number;
+}
+
+interface LanguageDonutItem {
+  name: string;
+  value: number;
+  color: string;
 }
 
 const HEADER_ICON_MAP: Record<HeaderIconName, LucideIcon> = {
@@ -234,6 +241,10 @@ function DashboardPage(): JSX.Element {
   );
   const projectionSeries = useMemo(
     () => buildStackProjectionSeries(overview?.languageDistribution ?? []),
+    [overview?.languageDistribution]
+  );
+  const languageDonutData = useMemo(
+    () => normalizeLanguageDistribution(overview?.languageDistribution ?? []),
     [overview?.languageDistribution]
   );
   const maxRankingCommitCount = useMemo(
@@ -448,11 +459,15 @@ function DashboardPage(): JSX.Element {
 
           <div className="dashboard-repo">
             <div className="dashboard-repo__ranking">
-              <div className="dashboard-repo__block-title">项目活跃排行榜（近 30 天）</div>
-              <div className="dashboard-repo__rank-head">
-                <span className="dashboard-repo__rank-head-label">仓库</span>
-                <span>提交数</span>
-                <span>活跃天数</span>
+              <div className="dashboard-repo__ranking-header">
+                <div className="dashboard-repo__block-title">
+                  <span className="dashboard-repo__ranking-title-main">项目活跃排行榜</span>
+                  <span className="dashboard-repo__ranking-title-sub">（近 30 天）</span>
+                </div>
+                <div className="dashboard-repo__rank-head">
+                  <span>提交数</span>
+                  <span>活跃天数</span>
+                </div>
               </div>
               {overview.rankings.length > 0 ? (
                 overview.rankings.slice(0, 5).map((item, index) => (
@@ -465,11 +480,19 @@ function DashboardPage(): JSX.Element {
                         : 'dashboard-repo__rank-item'
                     }
                     onClick={() => setSelectedRepoId(item.repoId)}
-                  >
+                    >
                     <span className="dashboard-repo__rank-index">{index + 1}</span>
-                    <div className="dashboard-repo__rank-copy">
-                      <strong>{item.name}</strong>
-                      <small>{item.stackTags.join(' · ') || item.fullName}</small>
+                    <div className="dashboard-repo__rank-main">
+                      <div className="dashboard-repo__rank-row">
+                        <div className="dashboard-repo__rank-copy">
+                          <strong>{item.name}</strong>
+                          <small>{buildRankingSubtitle(item)}</small>
+                        </div>
+                        <div className="dashboard-repo__rank-metrics">
+                          <span>{item.commitCount30d}</span>
+                          <span>{item.activeDays30d}</span>
+                        </div>
+                      </div>
                       <span className="dashboard-repo__rank-progress">
                         <i
                           style={{
@@ -478,14 +501,16 @@ function DashboardPage(): JSX.Element {
                         />
                       </span>
                     </div>
-                    <div className="dashboard-repo__rank-metrics">
-                      <span>{item.commitCount30d}</span>
-                      <span>{item.activeDays30d}</span>
-                    </div>
                   </button>
                 ))
               ) : (
                 <EmptyState title="暂无项目排行" description="完成同步后这里会展示近 30 天最活跃的仓库。" />
+              )}
+              {overview.rankings.length > 0 && (
+                <Link className="dashboard-repo__ranking-link" to="/repos">
+                  <span>查看全部项目</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
               )}
             </div>
 
@@ -496,43 +521,44 @@ function DashboardPage(): JSX.Element {
                     <div className="dashboard-repo__detail-icon">
                       <MetricIcon name="repos" />
                     </div>
-                    <div>
+                    <div className="dashboard-repo__detail-copy">
                       <strong>{featuredRepo.name}</strong>
-                      <p>{featuredRepo.description || 'CodeView 项目数据看板'}</p>
+                      <p>{featuredRepo.description || '个人项目资产看板系统'}</p>
                     </div>
                   </div>
 
-                  <div className="dashboard-repo__tags">
-                    {featuredRepo.tags.slice(0, 5).map((item) => (
-                      <span key={item.tag}>{item.tag}</span>
+                  <div className="dashboard-repo__detail-techs">
+                    {buildRepoTechTags(featuredRepo).map((item, index) => (
+                      <span key={`${item}-${index}`} className="dashboard-repo__detail-tech">
+                        <i
+                          aria-hidden="true"
+                          className={`dashboard-repo__detail-tech-dot dashboard-repo__detail-tech-dot--${index % 4}`}
+                        />
+                        {item}
+                      </span>
                     ))}
                   </div>
 
-                  <div className="dashboard-repo__detail-stats">
-                    <div>
-                      <span>近 30 天提交数</span>
-                      <strong>{formatNumber(featuredRepo.commitCount30d)}</strong>
+                  <div className="dashboard-repo__detail-metrics">
+                    <div className="dashboard-repo__detail-metric-grid dashboard-repo__detail-metric-grid--primary">
+                      <RepoMetricCell label="近 30 天提交数" value={formatNumber(featuredRepo.commitCount30d)} />
+                      <RepoMetricCell label="活跃天数" value={formatNumber(featuredRepo.activeDays30d)} />
                     </div>
-                    <div>
-                      <span>活跃天数</span>
-                      <strong>{formatNumber(featuredRepo.activeDays30d)}</strong>
-                    </div>
-                    <div>
-                      <span>最近提交时间</span>
-                      <strong>{formatDateTime(featuredRepo.lastCommitAt)}</strong>
-                    </div>
-                    <div>
-                      <span>Star / Fork</span>
-                      <strong>
-                        {featuredRepo.starsCount} / {featuredRepo.forksCount}
-                      </strong>
+                    <div className="dashboard-repo__detail-metric-grid dashboard-repo__detail-metric-grid--secondary">
+                      <RepoMetricCell label="最近提交时间" value={formatRepoCardDateTime(featuredRepo.lastCommitAt)} compact />
+                      <RepoMetricCell label="Star 数" value={formatNumber(featuredRepo.starsCount)} compact />
+                      <RepoMetricCell label="Fork 数" value={formatNumber(featuredRepo.forksCount)} compact />
                     </div>
                   </div>
 
                   <div className="dashboard-repo__detail-footer">
-                    <ScoreRing score={featuredRepo.score} />
+                    <div className="dashboard-repo__detail-score">
+                      <span className="dashboard-repo__detail-score-label">综合评分</span>
+                      <ScoreRing score={featuredRepo.score} />
+                    </div>
                     <Link className="dashboard-repo__detail-link" to={`/repos/${featuredRepo.id}`}>
-                      查看详情
+                      <span>查看详情</span>
+                      <span aria-hidden="true">→</span>
                     </Link>
                   </div>
                 </>
@@ -576,11 +602,30 @@ function DashboardPage(): JSX.Element {
           <div className="dashboard-stack__block">
             <div className="dashboard-stack__block-title">语言占比（按字节数）</div>
             {overview.languageDistribution.length > 0 ? (
-              <ReactECharts
-                option={buildLanguageDonutOption(overview.languageDistribution)}
-                style={{ height: 260 }}
-                opts={{ renderer: 'svg' }}
-              />
+              <div className="dashboard-language">
+                <div className="dashboard-language__chart">
+                  <ReactECharts
+                    option={buildLanguageDonutOption(languageDonutData)}
+                    style={{ height: 260 }}
+                    opts={{ renderer: 'svg' }}
+                  />
+                </div>
+                <div className="dashboard-language__legend">
+                  {languageDonutData.map((item) => (
+                    <div key={item.name} className="dashboard-language__legend-item">
+                      <span className="dashboard-language__legend-label">
+                        <i
+                          className="dashboard-language__legend-dot"
+                          aria-hidden="true"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span>{item.name}</span>
+                      </span>
+                      <strong>{item.value.toFixed(1)}%</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
               <EmptyState title="暂无语言分布" description="同步语言数据后这里会展示当前主力语言结构。" />
             )}
@@ -812,6 +857,17 @@ function ActivityStatCard(props: { label: string; value: string; hint: string })
   );
 }
 
+function RepoMetricCell(props: { label: string; value: string; compact?: boolean }): JSX.Element {
+  const { label, value, compact = false } = props;
+
+  return (
+    <div className={compact ? 'dashboard-repo__detail-metric dashboard-repo__detail-metric--compact' : 'dashboard-repo__detail-metric'}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
 function ScoreRing(props: { score: number }): JSX.Element {
   const { score } = props;
   const normalizedScore = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
@@ -820,7 +876,7 @@ function ScoreRing(props: { score: number }): JSX.Element {
     <div
       className="dashboard-score-ring"
       style={{
-        background: `conic-gradient(#b8ff3b 0deg ${normalizedScore * 3.6}deg, rgba(255,255,255,0.08) ${normalizedScore * 3.6}deg 360deg)`
+        background: `conic-gradient(from 212deg, rgba(255,255,255,0.08) 0deg ${360 - normalizedScore * 3.6}deg, #b5ff35 ${360 - normalizedScore * 3.6}deg 360deg)`
       }}
     >
       <div className="dashboard-score-ring__inner">
@@ -852,6 +908,41 @@ function MetricIcon(props: { name: MetricIconName }): JSX.Element {
   const Icon = METRIC_ICON_MAP[name];
 
   return <Icon aria-hidden="true" strokeWidth={1.8} />;
+}
+
+function formatRepoCardDateTime(value: string | null): string {
+  if (!value) {
+    return '--';
+  }
+
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+function buildRepoTechTags(repo: RepoDetail): string[] {
+  const candidates = [
+    ...repo.tags.map((item) => item.tag.trim()),
+    repo.mainLanguage.trim(),
+    ...repo.languages.map((item) => item.language.trim())
+  ].filter((item) => item.length > 0);
+
+  const uniqueItems = candidates.filter((item, index, array) => {
+    const normalizedItem = item.toLowerCase();
+    return array.findIndex((current) => current.toLowerCase() === normalizedItem) === index;
+  });
+
+  return uniqueItems.slice(0, 4);
+}
+
+function buildRankingSubtitle(item: RankingItem): string {
+  const stackSummary = item.stackTags.join(' · ').trim();
+  return stackSummary || item.fullName;
 }
 
 function buildActivityTrendOption(data: Array<{ date: string; count: number }>): EChartsOption {
@@ -983,46 +1074,35 @@ function buildRepoBarOption(data: RepoActivityPoint[]): EChartsOption {
   };
 }
 
-function buildLanguageDonutOption(data: Array<{ name: string; value: number }>): EChartsOption {
+function normalizeLanguageDistribution(data: Array<{ name: string; value: number }>): LanguageDonutItem[] {
   const total = data.reduce((sum, item) => sum + item.value, 0);
-  const normalized = data.map((item) => ({
-    name: item.name,
-    value: total > 0 ? Number(((item.value / total) * 100).toFixed(1)) : 0
-  }));
-  const top = normalized[0];
   const colorPalette = ['#c5e832', '#8fda6b', '#668cff', '#7d85ff', '#f4c44e', '#5ab8ff', '#ff965f', '#c6c9d2'];
 
+  return data.map((item, index) => ({
+    name: item.name,
+    value: total > 0 ? Number(((item.value / total) * 100).toFixed(1)) : 0,
+    color: colorPalette[index] ?? '#c6c9d2'
+  }));
+}
+
+function buildLanguageDonutOption(data: LanguageDonutItem[]): EChartsOption {
+  const top = data[0];
+
   return {
-    color: colorPalette,
+    color: data.map((item) => item.color),
     tooltip: {
       trigger: 'item',
       backgroundColor: '#0d1114',
       borderColor: 'rgba(184,255,59,0.18)',
       textStyle: {
         color: '#f3ebdd'
-      }
-    },
-    legend: {
-      orient: 'vertical',
-      icon: 'circle',
-      itemWidth: 8,
-      itemHeight: 8,
-      itemGap: 12,
-      right: 2,
-      top: 'center',
-      textStyle: {
-        color: '#d7dccf',
-        fontSize: 11
       },
-      formatter: (value: string) => {
-        const target = normalized.find((item) => item.name === value);
-        return target ? `${value}      ${target.value.toFixed(1)}%` : value;
-      }
+      formatter: '{b}<br />占比 {c}%'
     },
     title: {
       text: top ? `主要语言\n${top.name}\n${top.value.toFixed(1)}%` : '暂无数据',
-      left: '33%',
-      top: '37%',
+      left: 'center',
+      top: '36%',
       textAlign: 'center',
       textStyle: {
         color: '#f3ebdd',
@@ -1034,18 +1114,25 @@ function buildLanguageDonutOption(data: Array<{ name: string; value: number }>):
     series: [
       {
         type: 'pie',
-        radius: ['50%', '72%'],
-        center: ['35%', '51%'],
+        radius: ['54%', '78%'],
+        center: ['50%', '51%'],
         startAngle: 95,
         avoidLabelOverlap: false,
         label: {
           show: false
         },
+        emphasis: {
+          scale: true,
+          itemStyle: {
+            shadowBlur: 18,
+            shadowColor: 'rgba(181,255,53,0.22)'
+          }
+        },
         itemStyle: {
           borderColor: '#0f1317',
           borderWidth: 2
         },
-        data: normalized
+        data
       }
     ]
   };
