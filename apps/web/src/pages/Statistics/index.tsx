@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import type { EChartsOption } from 'echarts';
 import ReactECharts from 'echarts-for-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Activity,
+  BarChart3,
+  CheckCircle2,
+  Clock3,
+  FolderOpen,
+  GitBranch,
+  GitCommitHorizontal,
+  RefreshCw,
+  Settings2,
+  User
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmptyState } from '../../components/commons/EmptyState';
 import { LoadingBlock } from '../../components/commons/LoadingBlock';
@@ -57,6 +70,24 @@ interface TrendPoint {
   label: string;
   count: number;
 }
+
+const HEADER_ICON_MAP: Record<HeaderIconName, LucideIcon> = {
+  user: User,
+  clock: Clock3,
+  sync: RefreshCw,
+  success: CheckCircle2,
+  github: GitBranch,
+  settings: Settings2
+};
+
+const SUMMARY_ICON_LIST: LucideIcon[] = [
+  GitCommitHorizontal,
+  FolderOpen,
+  Activity,
+  Clock3,
+  BarChart3,
+  GitBranch
+];
 
 /**
  * 页面说明：数据统计页面。
@@ -669,152 +700,16 @@ function StatisticsRankingTable(props: { rows: StatisticsRepoRankingRow[] }): Re
 
 function HeaderIcon(props: { name: HeaderIconName }): ReactElement {
   const { name } = props;
+  const Icon = HEADER_ICON_MAP[name];
 
-  if (name === 'user') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        <path
-          d="M6.4 18.2a6.2 6.2 0 0 1 11.2 0"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-
-  if (name === 'clock') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        <path
-          d="M12 7.8v4.6l3.2 1.9"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
-  if (name === 'sync') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path
-          d="M7.2 7.7h4V3.8M16.8 16.3h-4v3.9"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M8 6.5A6.8 6.8 0 0 1 19 11m-3 6.5A6.8 6.8 0 0 1 5 13"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-
-  if (name === 'success') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        <path
-          d="m8.7 12.3 2.2 2.2 4.4-4.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
-  if (name === 'github') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path
-          d="M12 3.6a8.4 8.4 0 0 0-2.7 16.4c.4.1.6-.2.6-.5V18c-2.4.5-2.9-1-2.9-1-.4-.8-.9-1.1-.9-1.1-.7-.5 0-.5 0-.5.8.1 1.2.8 1.2.8.7 1.1 1.9.8 2.4.6.1-.5.3-.8.5-1-1.9-.2-4-.9-4-4.2 0-.9.3-1.7.8-2.3-.1-.2-.4-1 .1-2.2 0 0 .7-.2 2.3.8a8 8 0 0 1 4.2 0c1.6-1 2.3-.8 2.3-.8.5 1.2.2 2 .1 2.2.5.6.8 1.4.8 2.3 0 3.3-2.1 4-4 4.2.3.2.5.7.5 1.4v2c0 .3.2.6.6.5A8.4 8.4 0 0 0 12 3.6Z"
-          fill="currentColor"
-        />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M12 5.5 9.8 4.2 8 5.5l-2.5-.3-.9 2.3L3 9l1.1 2.2-.4 2.4 2.1 1.4.8 2.3 2.5-.1 2 1.5 2-1.5 2.5.1.8-2.3 2.1-1.4-.4-2.4L21 9l-1.6-1.5-.9-2.3-2.5.3L14.2 4.2 12 5.5Zm0 3a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+  return <Icon aria-hidden="true" strokeWidth={1.8} />;
 }
 
 function SummaryIcon(props: { index: number }): ReactElement {
   const { index } = props;
+  const Icon = SUMMARY_ICON_LIST[index] ?? SUMMARY_ICON_LIST[0];
 
-  const icons: ReactElement[] = [
-    <svg key="summary-1" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M8 6v12M16 6v12M8 12h8"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>,
-    <svg key="summary-2" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5 8.5 12 4l7 4.5V17l-7 4-7-4V8.5Z" fill="none" stroke="currentColor" strokeWidth="1.4" />
-    </svg>,
-    <svg key="summary-3" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M4.5 12h3.5l2-4.4 3.1 9 2.2-5h4.2"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>,
-    <svg key="summary-4" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M12 8v4.2l2.8 1.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>,
-    <svg key="summary-5" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 18V9m6 9V5m6 13v-7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>,
-    <svg key="summary-6" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M8 5.5a2.1 2.1 0 1 1 0 4.2 2.1 2.1 0 0 1 0-4.2Zm8 8.4a2.1 2.1 0 1 1 0 4.2 2.1 2.1 0 0 1 0-4.2ZM8 14a2.1 2.1 0 1 1 0 4.2A2.1 2.1 0 0 1 8 14Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-      />
-      <path
-        d="M8 9.7v4.2m0 0c4.2 0 5-2.2 5-5.4V7.6m-5 6.3c4.2 0 5 2.1 5 4.5v.1m0-10.9a2.1 2.1 0 1 0 0-4.2 2.1 2.1 0 0 0 0 4.2Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ];
-
-  return icons[index] ?? icons[0];
+  return <Icon aria-hidden="true" strokeWidth={1.8} />;
 }
 
 function buildTrendSeries(

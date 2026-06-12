@@ -1,6 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { EChartsOption } from 'echarts';
 import ReactECharts from 'echarts-for-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Activity,
+  AlertCircle,
+  BarChart3,
+  CheckCircle2,
+  Clock3,
+  Copy,
+  FolderOpen,
+  GitBranch,
+  GitCommitHorizontal,
+  RefreshCw,
+  Settings2,
+  User
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmptyState } from '../../components/commons/EmptyState';
 import { LoadingBlock } from '../../components/commons/LoadingBlock';
@@ -48,6 +63,23 @@ interface HeatmapMatrixModel {
   cells: HeatmapMatrixCell[];
   maxValue: number;
 }
+
+const HEADER_ICON_MAP: Record<HeaderIconName, LucideIcon> = {
+  user: User,
+  clock: Clock3,
+  sync: RefreshCw,
+  success: CheckCircle2,
+  github: GitBranch,
+  settings: Settings2
+};
+
+const METRIC_ICON_MAP: Record<MetricIconName, LucideIcon> = {
+  repos: FolderOpen,
+  commits: GitCommitHorizontal,
+  active: Activity,
+  views: BarChart3,
+  clones: Copy
+};
 
 /**
  * 页面说明：首页 Dashboard。
@@ -803,119 +835,23 @@ function InsightMarker(props: { level: InsightLevel }): JSX.Element {
 
   return (
     <span className={`dashboard-insight__marker dashboard-insight__marker--${level}`}>
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
-        <path d="M12 8.5v3.8M12 15.5h.01" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
+      <AlertCircle aria-hidden="true" strokeWidth={1.8} />
     </span>
   );
 }
 
 function HeaderIcon(props: { name: HeaderIconName }): JSX.Element {
   const { name } = props;
+  const Icon = HEADER_ICON_MAP[name];
 
-  if (name === 'user') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M6.4 18.2a6.2 6.2 0 0 1 11.2 0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  if (name === 'clock') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M12 7.8v4.6l3.2 1.9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  if (name === 'sync') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M7.2 7.7h4V3.8M16.8 16.3h-4v3.9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M8 6.5A6.8 6.8 0 0 1 19 11m-3 6.5A6.8 6.8 0 0 1 5 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  if (name === 'success') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        <path d="m8.7 12.3 2.2 2.2 4.4-4.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  if (name === 'github') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path
-          d="M12 3.6a8.4 8.4 0 0 0-2.7 16.4c.4.1.6-.2.6-.5V18c-2.4.5-2.9-1-2.9-1-.4-.8-.9-1.1-.9-1.1-.7-.5 0-.5 0-.5.8.1 1.2.8 1.2.8.7 1.1 1.9.8 2.4.6.1-.5.3-.8.5-1-1.9-.2-4-.9-4-4.2 0-.9.3-1.7.8-2.3-.1-.2-.4-1 .1-2.2 0 0 .7-.2 2.3.8a8 8 0 0 1 4.2 0c1.6-1 2.3-.8 2.3-.8.5 1.2.2 2 .1 2.2.5.6.8 1.4.8 2.3 0 3.3-2.1 4-4 4.2.3.2.5.7.5 1.4v2c0 .3.2.6.6.5A8.4 8.4 0 0 0 12 3.6Z"
-          fill="currentColor"
-        />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M12 5.5 9.8 4.2 8 5.5l-2.5-.3-.9 2.3L3 9l1.1 2.2-.4 2.4 2.1 1.4.8 2.3 2.5-.1 2 1.5 2-1.5 2.5.1.8-2.3 2.1-1.4-.4-2.4L21 9l-1.6-1.5-.9-2.3-2.5.3L14.2 4.2 12 5.5Zm0 3a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+  return <Icon aria-hidden="true" strokeWidth={1.8} />;
 }
 
 function MetricIcon(props: { name: MetricIconName }): JSX.Element {
   const { name } = props;
+  const Icon = METRIC_ICON_MAP[name];
 
-  if (name === 'commits') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M5.5 12h5m3 0h5M10.5 8l-3 4 3 4M13.5 8l3 4-3 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  if (name === 'active') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4.5 12h3.5l2-4.4 3.1 9 2.2-5h4.2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  if (name === 'views') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M2.8 12s3.2-5 9.2-5 9.2 5 9.2 5-3.2 5-9.2 5-9.2-5-9.2-5Z" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        <circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      </svg>
-    );
-  }
-
-  if (name === 'clones') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 5v10M8 11l4 4 4-4M6 18h12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3.4 4.5 7.5v9L12 20.6l7.5-4.1v-9L12 3.4Z" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M4.5 7.5 12 11l7.5-3.5M12 11v9.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
-  );
+  return <Icon aria-hidden="true" strokeWidth={1.8} />;
 }
 
 function buildActivityTrendOption(data: Array<{ date: string; count: number }>): EChartsOption {
