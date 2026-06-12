@@ -11,14 +11,14 @@
 .repo-detail-hero,
 .repo-detail-panel {
   border: 1px solid rgba(184, 255, 59, 0.08);
-  border-radius: 8px;
+  border-radius: 2px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0)),
     linear-gradient(90deg, rgba(0, 80, 160, 0.05), transparent 42%),
     rgba(9, 13, 16, 0.96);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.02),
-    0 0 0 1px rgba(5, 11, 14, 0.45);
+    0 0 0 1px rgba(5, 11, 14, 0.32);
 }
 
 .repo-detail-page__back {
@@ -58,14 +58,15 @@
 .repo-detail-hero__action {
   min-height: 32px;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid rgba(184, 255, 59, 0.12);
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: rgba(255, 255, 255, 0.02);
+  background: transparent;
   color: #dde2d8;
   font-size: 0.72rem;
+  box-shadow: none;
 }
 
 .repo-detail-hero__action--ghost {
@@ -113,7 +114,7 @@
 .repo-detail-hero__icon {
   width: 74px;
   height: 74px;
-  border-radius: 12px;
+  border-radius: 2px;
   display: grid;
   place-items: center;
   color: #2cc7ff;
@@ -148,7 +149,7 @@
 .repo-detail-hero__badge {
   min-height: 22px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: 2px;
   display: inline-flex;
   align-items: center;
   background: rgba(184, 255, 59, 0.12);
@@ -174,11 +175,12 @@
 .repo-detail-hero__tag {
   min-height: 24px;
   padding: 0 10px 0 18px;
-  border-radius: 999px;
+  border-radius: 2px;
   position: relative;
   display: inline-flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   color: #cfd5cb;
   font-size: 0.66rem;
 }
@@ -431,11 +433,11 @@
 .repo-detail-panel__header-corner {
   width: 20px;
   height: 20px;
-  border-radius: 999px;
+  border-radius: 0;
   display: grid;
   place-items: center;
   color: #6e786a;
-  background: rgba(255, 255, 255, 0.03);
+  background: transparent;
 }
 
 .repo-detail-panel__header-corner svg {
@@ -451,11 +453,13 @@
 .repo-detail-panel__range-button {
   min-height: 26px;
   padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
   color: #9ca593;
   font-size: 0.68rem;
+  box-shadow: none;
 }
 
 .repo-detail-panel__tab-group,
@@ -469,8 +473,8 @@
 .repo-detail-panel__mini-tab,
 .repo-detail-panel__mode-tab {
   min-height: auto;
-  padding: 5px 10px;
-  border-radius: 999px;
+  padding: 4px 0 7px;
+  border-radius: 0;
   font-size: 0.66rem;
 }
 
@@ -480,22 +484,26 @@
 
 .repo-detail-panel__tab {
   color: #8d9789;
-  background: rgba(255, 255, 255, 0.03);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  box-shadow: none;
 }
 
 .repo-detail-panel__tab--active,
 .repo-detail-panel__mini-tab--active,
 .repo-detail-panel__mode-tab--active {
   color: var(--color-accent);
-  background: rgba(184, 255, 59, 0.08);
-  border-color: rgba(184, 255, 59, 0.18);
+  background: transparent;
+  border-color: var(--color-accent);
 }
 
 .repo-detail-panel__mini-tab,
 .repo-detail-panel__mode-tab {
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 0;
+  border-bottom: 1px solid transparent;
   color: #8d9789;
-  background: rgba(255, 255, 255, 0.03);
+  background: transparent;
 }
 
 .repo-detail-panel__chart-box {
@@ -511,8 +519,8 @@
 
 .repo-detail-panel__chart-box--trend,
 .repo-detail-panel__chart-box--traffic {
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.01);
+  border-radius: 0;
+  background: transparent;
 }
 
 .repo-detail-panel__trend-metrics {
@@ -756,7 +764,7 @@
 .repo-detail-stack__tag-list span {
   min-height: 26px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 2px;
   display: inline-flex;
   align-items: center;
   background: rgba(184, 255, 59, 0.06);
@@ -807,9 +815,11 @@
 .repo-detail-list__item,
 .repo-detail-commit-list__item,
 .repo-detail-insight-list__item {
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .repo-detail-list__item {
@@ -818,6 +828,12 @@
   gap: 10px;
   align-items: center;
   padding: 12px;
+}
+
+.repo-detail-list__item:last-child,
+.repo-detail-commit-list__item:last-child,
+.repo-detail-insight-list__item:last-child {
+  border-bottom: 0;
 }
 
 .repo-detail-list__main {
@@ -851,7 +867,7 @@
 .repo-detail-list__badge {
   min-height: 18px;
   padding: 0 7px;
-  border-radius: 999px;
+  border-radius: 2px;
   display: inline-flex;
   align-items: center;
   background: rgba(184, 255, 59, 0.12);
@@ -871,7 +887,7 @@
 .repo-detail-commit-list__avatar {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: 2px;
   display: grid;
   place-items: center;
   background: rgba(86, 167, 255, 0.14);
@@ -919,7 +935,7 @@
 .repo-detail-insight-list__icon {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: 2px;
   display: grid;
   place-items: center;
 }
@@ -957,7 +973,7 @@
 .repo-detail-insight-list__title-row em {
   min-height: 18px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: 2px;
   display: inline-flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.04);
@@ -988,7 +1004,21 @@
   color: #d9ff62;
 }
 
+.repo-detail-panel .empty-state {
+  min-height: 140px;
+  padding: 16px 4px 10px;
+  border: 0;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 0;
+  background: transparent;
+}
+
 @media (max-width: 1180px) {
+  .repo-detail-hero__actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
   .repo-detail-hero__body,
   .repo-detail-grid--primary,
   .repo-detail-grid--secondary {
@@ -1003,6 +1033,18 @@
   .repo-detail-hero__meta::before,
   .repo-detail-hero__score::before {
     display: none;
+  }
+
+  .repo-detail-hero__summary,
+  .repo-detail-hero__meta,
+  .repo-detail-hero__score {
+    padding-right: 0;
+  }
+
+  .repo-detail-hero__meta,
+  .repo-detail-hero__score {
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 }
 

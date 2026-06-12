@@ -346,10 +346,11 @@ option {
 .app-shell__sidebar-footer {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   max-height: 240px;
   margin-top: auto;
-  padding: 0 10px 12px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   overflow: hidden;
   transition:
     max-height 0.24s ease,
@@ -361,19 +362,26 @@ option {
 .app-shell__sidebar-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.02);
+  gap: 5px;
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
   color: var(--color-text-secondary);
   font-size: 0.7rem;
   line-height: 1.45;
 }
 
 .app-shell__sidebar-card-title {
-  color: var(--color-text-primary);
+  margin-top: 6px;
+  color: rgba(154, 148, 136, 0.72);
   font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.app-shell__sidebar-card-title:first-child {
+  margin-top: 0;
 }
 
 .app-shell__sidebar-meta {
@@ -445,7 +453,7 @@ option {
 .app-banner {
   margin: 8px 10px 0;
   padding: 12px 16px;
-  border-radius: 14px;
+  border-radius: 2px;
   border: 1px solid rgba(217, 108, 63, 0.28);
   background: rgba(217, 108, 63, 0.12);
   color: var(--color-text-primary);
