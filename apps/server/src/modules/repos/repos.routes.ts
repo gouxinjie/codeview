@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '../../utils/http';
+import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '@/utils/http';
 import {
   getRepositories,
   getRepositoryActivity,
@@ -9,7 +9,7 @@ import {
   getRepositoryRecentCommits,
   getRepositoryStack,
   getRepositoryTraffic
-} from './repos.service';
+} from '@/modules/repos/repos.service';
 
 const activityQuerySchema = z.object({
   granularity: z.enum(['day', 'week', 'month']).default('day')

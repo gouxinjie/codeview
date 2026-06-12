@@ -1,9 +1,9 @@
 import { subDays } from 'date-fns';
-import { db } from '../../database/client';
-import { getConfig, getDecryptedToken, updateLastSyncedAt } from '../config/config.service';
-import { logger } from '../../utils/logger';
-import { escapeHtml } from '../../utils/security';
-import { DEFAULT_TIMEZONE, getDayKey, getDaysFromNow, getMonthKey, getWeekKey } from '../../utils/time';
+import { db } from '@/database/client';
+import { getConfig, getDecryptedToken, updateLastSyncedAt } from '@/modules/config/config.service';
+import { logger } from '@/utils/logger';
+import { escapeHtml } from '@/utils/security';
+import { DEFAULT_TIMEZONE, getDayKey, getDaysFromNow, getMonthKey, getWeekKey } from '@/utils/time';
 import {
   fetchGitHubRepos,
   fetchGitHubUser,
@@ -13,7 +13,7 @@ import {
   fetchRepoTraffic,
   mergeTrafficByDate,
   type GitHubRepoResponse
-} from './github.client';
+} from '@/modules/sync/github.client';
 
 type SyncMode = 'full' | 'incremental' | 'single';
 

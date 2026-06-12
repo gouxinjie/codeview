@@ -1,6 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
     "module": "CommonJS",
     "rootDir": "src",
     "outDir": "dist",
@@ -16,4 +22,3 @@
     "src/**/*.ts"
   ]
 }
-

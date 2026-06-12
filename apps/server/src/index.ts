@@ -1,8 +1,8 @@
-import { createApp } from './app';
-import { env } from './config/env';
-import { initializeSchedules } from './config/scheduler';
-import { ensureConfig } from './modules/config/config.service';
-import { logger } from './utils/logger';
+import { createApp } from '@/app';
+import { env } from '@/config/env';
+import { initializeSchedules } from '@/config/scheduler';
+import { ensureConfig } from '@/modules/config/config.service';
+import { logger } from '@/utils/logger';
 
 const app = createApp();
 

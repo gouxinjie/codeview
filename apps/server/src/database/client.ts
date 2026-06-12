@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { env } from '../config/env';
+import { env } from '@/config/env';
 
 const databaseDirectory = path.dirname(env.databasePath);
 
@@ -176,4 +176,3 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_daily_repo_date ON repo_activity_daily (repo_id, activity_date);
   CREATE INDEX IF NOT EXISTS idx_traffic_repo_date ON repo_traffic_daily (repo_id, traffic_date);
 `);
-

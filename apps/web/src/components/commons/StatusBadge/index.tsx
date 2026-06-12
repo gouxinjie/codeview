@@ -1,4 +1,4 @@
-import { translateSyncStatus } from '../../../utils/date';
+import { translateSyncStatus } from '@/utils/date';
 import './index.scss';
 
 /**
@@ -22,4 +22,3 @@ export function StatusBadge(props: StatusBadgeProps): JSX.Element {
     </span>
   );
 }
-

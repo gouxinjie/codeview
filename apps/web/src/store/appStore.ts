@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ConfigView } from '../types/api';
+import type { ConfigView } from '@/types/api';
 
 interface AppState {
   userId: string;
@@ -25,4 +25,3 @@ export const useAppStore = create<AppState>((set) => ({
   setCsrfToken: (csrfToken) => set({ csrfToken }),
   setSelectedRepoId: (repoId) => set({ selectedRepoId: repoId })
 }));
-

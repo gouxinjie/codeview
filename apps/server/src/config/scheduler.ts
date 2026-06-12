@@ -1,7 +1,7 @@
 import cron, { type ScheduledTask } from 'node-cron';
-import { listSyncScheduleConfigs } from '../modules/config/config.service';
-import { logger } from '../utils/logger';
-import { syncGitHubData } from '../modules/sync/sync.service';
+import { listSyncScheduleConfigs } from '@/modules/config/config.service';
+import { logger } from '@/utils/logger';
+import { syncGitHubData } from '@/modules/sync/sync.service';
 
 const scheduleTasks = new Map<string, ScheduledTask>();
 
@@ -49,4 +49,3 @@ export function initializeSchedules(): void {
     refreshUserSchedule(config.userId, config.syncIntervalMinutes, config.hasToken);
   }
 }
-

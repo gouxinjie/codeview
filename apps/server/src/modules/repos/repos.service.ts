@@ -1,7 +1,7 @@
 import { subDays } from 'date-fns';
-import { db } from '../../database/client';
-import { getConfig } from '../config/config.service';
-import { getDayKey } from '../../utils/time';
+import { db } from '@/database/client';
+import { getConfig } from '@/modules/config/config.service';
+import { getDayKey } from '@/utils/time';
 
 export interface RepoListFilters {
   userId: string;

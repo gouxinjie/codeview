@@ -1,4 +1,4 @@
-import { escapeHtml } from '../../utils/security';
+import { escapeHtml } from '@/utils/security';
 
 interface GitHubUserResponse {
   login: string;
@@ -253,4 +253,3 @@ export function mergeTrafficByDate(payload: GitHubTrafficResponse): Array<{
     left.trafficDate.localeCompare(right.trafficDate)
   );
 }
-

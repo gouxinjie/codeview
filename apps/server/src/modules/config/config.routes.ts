@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '../../utils/http';
-import { getConfig, saveConfig, validateCsrfToken } from './config.service';
+import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '@/utils/http';
+import { getConfig, saveConfig, validateCsrfToken } from '@/modules/config/config.service';
 
 const configBodySchema = z.object({
   userId: z.string().min(1),
@@ -44,4 +44,3 @@ configRouter.post(
     sendSuccess(response, saveConfig(payload));
   })
 );
-

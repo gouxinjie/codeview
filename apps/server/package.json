@@ -4,8 +4,8 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "dev": "..\\..\\node_modules\\.bin\\tsx.cmd watch src/index.ts",
-    "build": "..\\..\\node_modules\\.bin\\tsc.cmd -p tsconfig.json",
+    "dev": "..\\..\\node_modules\\.bin\\tsx.cmd watch -r tsconfig-paths/register src/index.ts",
+    "build": "..\\..\\node_modules\\.bin\\tsc.cmd -p tsconfig.json && ..\\..\\node_modules\\.bin\\tsc-alias.cmd -p tsconfig.json",
     "typecheck": "..\\..\\node_modules\\.bin\\tsc.cmd -p tsconfig.json --noEmit",
     "start": "node dist/index.js"
   },
@@ -23,6 +23,8 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "@types/node": "^22.15.21",
+    "tsc-alias": "^1.8.17",
+    "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.4"
   }
 }

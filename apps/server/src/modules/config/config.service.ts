@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { env } from '../../config/env';
-import { db } from '../../database/client';
-import { createCsrfToken, decryptValue, encryptValue, escapeHtml } from '../../utils/security';
-import { DEFAULT_TIMEZONE } from '../../utils/time';
+import { env } from '@/config/env';
+import { db } from '@/database/client';
+import { createCsrfToken, decryptValue, encryptValue, escapeHtml } from '@/utils/security';
+import { DEFAULT_TIMEZONE } from '@/utils/time';
 
 const configInputSchema = z.object({
   userId: z.string().min(1),
@@ -272,4 +272,3 @@ export function listSyncScheduleConfigs(): SyncScheduleConfig[] {
     )
     .all() as SyncScheduleConfig[];
 }
-

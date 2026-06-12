@@ -1,5 +1,5 @@
 import type { EChartsOption } from 'echarts';
-import type { HeatmapCell, RepoActivityPoint, RepoTrafficPoint } from '../types/api';
+import type { HeatmapCell, RepoActivityPoint, RepoTrafficPoint } from '@/types/api';
 
 const themeText = '#F3EBDD';
 const themeSubText = '#9A9488';

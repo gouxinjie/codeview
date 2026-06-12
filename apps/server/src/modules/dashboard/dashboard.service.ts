@@ -1,8 +1,8 @@
 import { addDays, differenceInCalendarDays, subDays } from 'date-fns';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
-import { db } from '../../database/client';
-import { getConfig } from '../config/config.service';
-import { getDayKey } from '../../utils/time';
+import { db } from '@/database/client';
+import { getConfig } from '@/modules/config/config.service';
+import { getDayKey } from '@/utils/time';
 
 interface DailyActivityRow {
   activity_date: string;

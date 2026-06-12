@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import type { EChartsOption } from 'echarts';
 import ReactECharts from 'echarts-for-react';
 import { Link, useParams } from 'react-router-dom';
-import { EmptyState } from '../../components/commons/EmptyState';
-import { LoadingBlock } from '../../components/commons/LoadingBlock';
-import { PanelHeading } from '../../components/commons/PanelHeading';
-import { ScoreRing } from '../../components/commons/ScoreRing';
+import { EmptyState } from '@/components/commons/EmptyState';
+import { LoadingBlock } from '@/components/commons/LoadingBlock';
+import { PanelHeading } from '@/components/commons/PanelHeading';
+import { ScoreRing } from '@/components/commons/ScoreRing';
 import type {
   HeatmapCell,
   RepoActivityPoint,
@@ -13,7 +13,7 @@ import type {
   RepoRecentCommit,
   RepoStackDetail,
   RepoTrafficPoint
-} from '../../types/api';
+} from '@/types/api';
 import {
   fetchRepositoryActivity,
   fetchRepositoryDetail,
@@ -21,9 +21,9 @@ import {
   fetchRepositoryRecentCommits,
   fetchRepositoryStack,
   fetchRepositoryTraffic
-} from '../../utils/api';
-import { formatDateTime, formatNumber } from '../../utils/date';
-import { buildHeatmapMatrix, getLongestHeatmapStreak, sumHeatmapCount } from '../../utils/heatmap';
+} from '@/utils/api';
+import { formatDateTime, formatNumber } from '@/utils/date';
+import { buildHeatmapMatrix, getLongestHeatmapStreak, sumHeatmapCount } from '@/utils/heatmap';
 import './index.scss';
 
 type TrendGranularity = 'day' | 'week' | 'month';

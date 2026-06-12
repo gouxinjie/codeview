@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '../../utils/http';
-import { validateCsrfToken } from '../config/config.service';
-import { getSyncStatus, syncGitHubData } from './sync.service';
+import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '@/utils/http';
+import { validateCsrfToken } from '@/modules/config/config.service';
+import { getSyncStatus, syncGitHubData } from '@/modules/sync/sync.service';
 
 const syncBodySchema = z.object({
   userId: z.string().min(1)
@@ -74,4 +74,3 @@ syncRouter.get(
     sendSuccess(response, getSyncStatus(userId));
   })
 );
-

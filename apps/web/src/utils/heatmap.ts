@@ -1,5 +1,5 @@
-import type { HeatmapCell } from '../types/api';
-import type { HeatmapMatrixCell, HeatmapMatrixModel, HeatmapMatrixMonth } from '../types/heatmap';
+import type { HeatmapCell } from '@/types/api';
+import type { HeatmapMatrixCell, HeatmapMatrixModel, HeatmapMatrixMonth } from '@/types/heatmap';
 
 /**
  * 函数说明：将日期对象转换为本地时区下的日期键，避免 UTC 偏移造成热力图错位。

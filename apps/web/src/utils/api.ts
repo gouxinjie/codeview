@@ -1,4 +1,4 @@
-import { useAppStore } from '../store/appStore';
+import { useAppStore } from '@/store/appStore';
 import type {
   ApiResponse,
   ConfigPayload,
@@ -14,7 +14,7 @@ import type {
   RepoTrafficPoint,
   StatisticsData,
   SyncStatus
-} from '../types/api';
+} from '@/types/api';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3101/api';
 

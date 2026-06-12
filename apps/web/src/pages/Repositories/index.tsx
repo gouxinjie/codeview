@@ -13,11 +13,11 @@ import {
   Star
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { EmptyState } from '../../components/commons/EmptyState';
-import { LoadingBlock } from '../../components/commons/LoadingBlock';
-import type { RepoListItem } from '../../types/api';
-import { fetchRepositories } from '../../utils/api';
-import { formatNumber } from '../../utils/date';
+import { EmptyState } from '@/components/commons/EmptyState';
+import { LoadingBlock } from '@/components/commons/LoadingBlock';
+import type { RepoListItem } from '@/types/api';
+import { fetchRepositories } from '@/utils/api';
+import { formatNumber } from '@/utils/date';
 import './index.scss';
 
 type RepositorySortMode = 'score' | 'activity' | 'updated' | 'stars';

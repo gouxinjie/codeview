@@ -15,9 +15,9 @@ import {
   User
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { EmptyState } from '../../components/commons/EmptyState';
-import { LoadingBlock } from '../../components/commons/LoadingBlock';
-import { useAppStore } from '../../store/appStore';
+import { EmptyState } from '@/components/commons/EmptyState';
+import { LoadingBlock } from '@/components/commons/LoadingBlock';
+import { useAppStore } from '@/store/appStore';
 import type {
   HeatmapCell,
   StatisticsActivityDistributionRow,
@@ -26,9 +26,9 @@ import type {
   StatisticsRepoRankingRow,
   StatisticsSummaryCard,
   StatisticsTimeHeatCell
-} from '../../types/api';
-import { fetchStatistics } from '../../utils/api';
-import { formatDate, formatDateTime, formatNumber, translateSyncStatus } from '../../utils/date';
+} from '@/types/api';
+import { fetchStatistics } from '@/utils/api';
+import { formatDate, formatDateTime, formatNumber, translateSyncStatus } from '@/utils/date';
 import './index.scss';
 
 type TrendGranularity = 'day' | 'week' | 'month';

@@ -2,9 +2,9 @@ import { lazy, Suspense, useEffect, useState, type ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { AlertCircle, BarChart3, Boxes, FileText, FolderOpen, LayoutGrid, Settings2 } from 'lucide-react';
 import { BrowserRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom';
-import { LoadingBlock } from './components/commons/LoadingBlock';
-import { useAppStore } from './store/appStore';
-import { fetchConfig } from './utils/api';
+import { LoadingBlock } from '@/components/commons/LoadingBlock';
+import { useAppStore } from '@/store/appStore';
+import { fetchConfig } from '@/utils/api';
 
 const DashboardPage = lazy(() => import('./pages/Dashboard'));
 const RepositoriesPage = lazy(() => import('./pages/Repositories'));

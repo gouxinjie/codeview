@@ -1,13 +1,13 @@
 import cors from 'cors';
 import express from 'express';
-import { env } from './config/env';
-import './database/client';
-import { configRouter } from './modules/config/config.routes';
-import { dashboardRouter } from './modules/dashboard/dashboard.routes';
-import { reposRouter } from './modules/repos/repos.routes';
-import { syncRouter } from './modules/sync/sync.routes';
-import { sendFailure } from './utils/http';
-import { logger } from './utils/logger';
+import { env } from '@/config/env';
+import '@/database/client';
+import { configRouter } from '@/modules/config/config.routes';
+import { dashboardRouter } from '@/modules/dashboard/dashboard.routes';
+import { reposRouter } from '@/modules/repos/repos.routes';
+import { syncRouter } from '@/modules/sync/sync.routes';
+import { sendFailure } from '@/utils/http';
+import { logger } from '@/utils/logger';
 
 export function createApp(): express.Express {
   const app = express();
@@ -51,4 +51,3 @@ export function createApp(): express.Express {
 
   return app;
 }
-

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '../../utils/http';
-import { getActiveRankings, getInsights, getOverview, getPersonalHeatmap, getStatistics } from './dashboard.service';
+import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '@/utils/http';
+import { getActiveRankings, getInsights, getOverview, getPersonalHeatmap, getStatistics } from '@/modules/dashboard/dashboard.service';
 
 export const dashboardRouter = Router();
 

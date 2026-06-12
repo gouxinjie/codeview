@@ -17,11 +17,11 @@ import {
   User
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { EmptyState } from '../../components/commons/EmptyState';
-import { LoadingBlock } from '../../components/commons/LoadingBlock';
-import { PanelHeading } from '../../components/commons/PanelHeading';
-import { ScoreRing } from '../../components/commons/ScoreRing';
-import { useAppStore } from '../../store/appStore';
+import { EmptyState } from '@/components/commons/EmptyState';
+import { LoadingBlock } from '@/components/commons/LoadingBlock';
+import { PanelHeading } from '@/components/commons/PanelHeading';
+import { ScoreRing } from '@/components/commons/ScoreRing';
+import { useAppStore } from '@/store/appStore';
 import type {
   ConfigPayload,
   HeatmapCell,
@@ -30,7 +30,7 @@ import type {
   RankingItem,
   RepoActivityPoint,
   RepoDetail
-} from '../../types/api';
+} from '@/types/api';
 import {
   fetchInsights,
   fetchOverview,
@@ -39,9 +39,9 @@ import {
   saveConfig,
   triggerFullSync,
   triggerIncrementalSync
-} from '../../utils/api';
-import { formatDateTime, formatNumber, translateSyncStatus } from '../../utils/date';
-import { buildHeatmapMatrix, buildHeatmapMonthLabels, getLongestHeatmapStreak } from '../../utils/heatmap';
+} from '@/utils/api';
+import { formatDateTime, formatNumber, translateSyncStatus } from '@/utils/date';
+import { buildHeatmapMatrix, buildHeatmapMonthLabels, getLongestHeatmapStreak } from '@/utils/heatmap';
 import './index.scss';
 
 interface ConfigFormState extends ConfigPayload {
