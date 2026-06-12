@@ -1,0 +1,424 @@
+/* 文件说明：项目列表页样式。 */
+/* 样式说明：按设计图重构筛选工具栏、仓库卡片和分页控件。 */
+/* 关键布局说明：顶部标题与筛选区，中部 4 列卡片网格，底部分页与每页条数选择。 */
+.repositories-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.repositories-page__hero,
+.repository-card,
+.repositories-page__pagination {
+  border: 1px solid rgba(184, 255, 59, 0.08);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0)),
+    linear-gradient(90deg, rgba(0, 80, 160, 0.05), transparent 42%),
+    rgba(9, 13, 16, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 0 0 1px rgba(5, 11, 14, 0.45);
+}
+
+.repositories-page__hero {
+  padding: 16px 18px 18px;
+}
+
+.repositories-page__title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.repositories-page__title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.repositories-page__count {
+  margin: 0;
+  color: #7f8a7f;
+  font-size: 0.86rem;
+}
+
+.repositories-page__toolbar {
+  display: grid;
+  grid-template-columns: 1.75fr repeat(4, minmax(0, 1fr)) auto;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.repositories-page__search,
+.repositories-page__select,
+.repositories-page__reset {
+  min-height: 56px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.repositories-page__search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+}
+
+.repositories-page__search-icon,
+.repositories-page__reset svg,
+.repositories-page__view-button svg,
+.repository-card__icon svg,
+.repository-card__meta-item svg {
+  width: 16px;
+  height: 16px;
+}
+
+.repositories-page__search-icon {
+  color: #6e776f;
+  flex: none;
+}
+
+.repositories-page__search input {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.repositories-page__search input:focus {
+  box-shadow: none;
+}
+
+.repositories-page__select {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 14px;
+}
+
+.repositories-page__select-label {
+  color: #7f8a7f;
+  font-size: 0.7rem;
+}
+
+.repositories-page__select select {
+  min-height: auto;
+  padding: 0 26px 0 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  font-size: 0.86rem;
+}
+
+.repositories-page__select select:focus {
+  box-shadow: none;
+}
+
+.repositories-page__reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-inline: 16px;
+  color: #d7dccf;
+}
+
+.repositories-page__toolbar-bottom {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.repositories-page__view-switch {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.repositories-page__view-button {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 8px;
+  color: #7f8a7f;
+}
+
+.repositories-page__view-button--active {
+  border-color: rgba(184, 255, 59, 0.28);
+  color: var(--color-accent);
+  background: rgba(184, 255, 59, 0.08);
+}
+
+.repositories-page__grid {
+  display: grid;
+  gap: 12px;
+}
+
+.repositories-page__grid--cards {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.repositories-page__grid--list {
+  grid-template-columns: 1fr;
+}
+
+.repository-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 210px;
+  padding: 14px;
+  color: var(--color-text-primary);
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.repository-card:hover {
+  border-color: rgba(184, 255, 59, 0.18);
+  transform: translateY(-2px);
+}
+
+.repositories-page__grid--list .repository-card {
+  min-height: auto;
+}
+
+.repository-card__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.repository-card__index {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.repository-card__identity {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.repository-card__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #78d6ff;
+  background: rgba(0, 161, 255, 0.08);
+  border: 1px solid rgba(0, 161, 255, 0.14);
+  flex: none;
+}
+
+.repository-card__title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.repository-card__title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repository-card__subtitle {
+  margin: 0;
+  min-height: 38px;
+  color: #7f8a7f;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.repository-card__score {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  padding: 4px;
+  display: inline-flex;
+}
+
+.repository-card__score span {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #0d1114;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.repository-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  min-height: 18px;
+}
+
+.repository-card__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #b9c2b8;
+  font-size: 0.68rem;
+}
+
+.repository-card__tag i {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  display: inline-block;
+  background: #2ec9ff;
+  box-shadow: 0 0 10px rgba(46, 201, 255, 0.26);
+}
+
+.repository-card__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.repository-card__summary div {
+  padding: 12px 10px;
+}
+
+.repository-card__summary div + div {
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.repository-card__summary span {
+  display: block;
+  color: #7f8a7f;
+  font-size: 0.68rem;
+}
+
+.repository-card__summary strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.repository-card__footer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: auto;
+}
+
+.repository-card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.repositories-page__pagination {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.repositories-page__pagination-count,
+.repositories-page__page-size span {
+  color: #7f8a7f;
+  font-size: 0.8rem;
+}
+
+.repositories-page__pagination-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.repositories-page__pagination-main > button,
+.repositories-page__page-button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
+.repositories-page__page-button--active {
+  border-color: rgba(184, 255, 59, 0.24);
+  color: var(--color-accent);
+  background: rgba(184, 255, 59, 0.08);
+}
+
+.repositories-page__page-ellipsis {
+  color: #7f8a7f;
+  font-size: 0.86rem;
+}
+
+.repositories-page__page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.repositories-page__page-size select {
+  width: 104px;
+}
+
+@media (max-width: 1440px) {
+  .repositories-page__toolbar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .repositories-page__grid--cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1120px) {
+  .repositories-page__toolbar,
+  .repositories-page__grid--cards,
+  .repository-card__summary,
+  .repository-card__footer,
+  .repositories-page__pagination {
+    grid-template-columns: 1fr;
+  }
+
+  .repositories-page__toolbar-bottom {
+    justify-content: flex-start;
+  }
+
+  .repositories-page__pagination-main {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .repositories-page__page-size {
+    justify-content: flex-start;
+  }
+}

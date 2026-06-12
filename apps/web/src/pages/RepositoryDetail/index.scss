@@ -1,0 +1,1056 @@
+/* 文件说明：项目详情页样式。 */
+/* 样式说明：按项目详情设计稿重做头部画像区、图表区和底部信息卡片。 */
+/* 关键布局说明：顶部单卡三栏布局，中部三列卡片，底部四列卡片。 */
+.repo-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-x: hidden;
+}
+
+.repo-detail-hero,
+.repo-detail-panel {
+  border: 1px solid rgba(184, 255, 59, 0.08);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0)),
+    linear-gradient(90deg, rgba(0, 80, 160, 0.05), transparent 42%),
+    rgba(9, 13, 16, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 0 0 1px rgba(5, 11, 14, 0.45);
+}
+
+.repo-detail-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 0;
+  color: #6f786d;
+  font-size: 0.74rem;
+}
+
+.repo-detail-page__back:hover {
+  color: #d5dbd0;
+}
+
+.repo-detail-page__back svg,
+.repo-detail-hero__metric svg,
+.repo-detail-hero__action svg,
+.repo-detail-hero__icon svg,
+.repo-detail-panel__header-corner svg,
+.repo-detail-insight-list__icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.repo-detail-hero {
+  padding: 14px 16px 0;
+}
+
+.repo-detail-hero__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.repo-detail-hero__action {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(184, 255, 59, 0.12);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.02);
+  color: #dde2d8;
+  font-size: 0.72rem;
+}
+
+.repo-detail-hero__action--ghost {
+  border-color: rgba(255, 255, 255, 0.05);
+  color: #9aa48f;
+}
+
+.repo-detail-hero__body {
+  display: grid;
+  grid-template-columns: 1.08fr 0.86fr 0.86fr;
+  gap: 0;
+  margin-top: 12px;
+}
+
+.repo-detail-hero__summary,
+.repo-detail-hero__meta,
+.repo-detail-hero__score {
+  min-width: 0;
+  padding: 14px 18px 16px 0;
+}
+
+.repo-detail-hero__meta,
+.repo-detail-hero__score {
+  padding-left: 22px;
+  position: relative;
+}
+
+.repo-detail-hero__meta::before,
+.repo-detail-hero__score::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.repo-detail-hero__identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.repo-detail-hero__icon {
+  width: 74px;
+  height: 74px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #2cc7ff;
+  background: rgba(0, 145, 255, 0.08);
+  border: 1px solid rgba(0, 145, 255, 0.16);
+  flex: none;
+}
+
+.repo-detail-hero__icon svg {
+  width: 30px;
+  height: 30px;
+}
+
+.repo-detail-hero__copy {
+  min-width: 0;
+}
+
+.repo-detail-hero__title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.repo-detail-hero__title-row h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.repo-detail-hero__badge {
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(184, 255, 59, 0.12);
+  color: var(--color-accent);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.repo-detail-hero__tagline {
+  margin: 10px 0 0;
+  color: #909a8a;
+  font-size: 0.78rem;
+  line-height: 1.7;
+}
+
+.repo-detail-hero__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.repo-detail-hero__tag {
+  min-height: 24px;
+  padding: 0 10px 0 18px;
+  border-radius: 999px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  color: #cfd5cb;
+  font-size: 0.66rem;
+}
+
+.repo-detail-hero__tag::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #5ab8ff;
+}
+
+.repo-detail-hero__tag--1::before {
+  background: #b8ff3b;
+}
+
+.repo-detail-hero__tag--2::before {
+  background: #7d85ff;
+}
+
+.repo-detail-hero__tag--3::before {
+  background: #d7a539;
+}
+
+.repo-detail-hero__stats {
+  display: flex;
+  gap: 24px;
+  margin-top: 18px;
+}
+
+.repo-detail-hero__metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.repo-detail-hero__field-list {
+  display: grid;
+  gap: 14px;
+}
+
+.repo-detail-hero__field span,
+.repo-detail-hero__description span,
+.repo-detail-hero__score-label {
+  display: block;
+  color: #788273;
+  font-size: 0.7rem;
+}
+
+.repo-detail-hero__field strong,
+.repo-detail-hero__field a {
+  display: block;
+  margin-top: 7px;
+  color: #e0e5dd;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  word-break: break-all;
+}
+
+.repo-detail-hero__field a:hover {
+  color: var(--color-accent);
+}
+
+.repo-detail-hero__description {
+  margin-top: 18px;
+}
+
+.repo-detail-hero__description p {
+  margin: 8px 0 0;
+  color: #8a9484;
+  font-size: 0.76rem;
+  line-height: 1.75;
+}
+
+.repo-detail-hero__score {
+  display: grid;
+  grid-template-columns: 138px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.repo-detail-hero__score-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.repo-detail-hero__score-ring {
+  width: 124px;
+  height: 124px;
+  padding: 10px;
+  border-radius: 999px;
+}
+
+.repo-detail-hero__score-ring-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #0d1114;
+  text-align: center;
+}
+
+.repo-detail-hero__score-ring-inner strong {
+  font-size: 2rem;
+  line-height: 1;
+  font-family: var(--font-mono);
+  color: var(--color-accent);
+}
+
+.repo-detail-hero__score-ring-inner span {
+  display: block;
+  margin-top: 4px;
+  color: #7d8779;
+  font-size: 0.72rem;
+}
+
+.repo-detail-hero__score-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.repo-detail-hero__score-row {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 28px;
+  gap: 10px;
+  align-items: center;
+}
+
+.repo-detail-hero__score-row span,
+.repo-detail-hero__score-row strong {
+  font-size: 0.72rem;
+}
+
+.repo-detail-hero__score-row span {
+  color: #9aa48f;
+}
+
+.repo-detail-hero__score-row strong {
+  color: #dfe4da;
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+.repo-detail-hero__score-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.repo-detail-hero__score-track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8cb708, #d6ff3a);
+}
+
+.repo-detail-hero__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.repo-detail-hero__nav-item {
+  min-height: auto;
+  padding: 0 0 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #80897e;
+  font-size: 0.76rem;
+  box-shadow: none;
+}
+
+.repo-detail-hero__nav-item:hover {
+  transform: none;
+  box-shadow: none;
+  color: #d7ddd3;
+}
+
+.repo-detail-hero__nav-item--active {
+  color: var(--color-accent);
+  box-shadow: inset 0 -2px 0 var(--color-accent);
+}
+
+.repo-detail-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.repo-detail-grid--primary {
+  grid-template-columns: 1.36fr 1.02fr 0.9fr;
+}
+
+.repo-detail-grid--secondary {
+  grid-template-columns: 1.22fr 0.92fr 0.92fr 1fr;
+}
+
+.repo-detail-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px;
+}
+
+.repo-detail-panel--trend,
+.repo-detail-panel--heatmap,
+.repo-detail-panel--stack {
+  min-height: 352px;
+}
+
+.repo-detail-panel--traffic,
+.repo-detail-panel--versions,
+.repo-detail-panel--commits,
+.repo-detail-panel--insights {
+  min-height: 308px;
+}
+
+.repo-detail-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.repo-detail-panel__title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.repo-detail-panel__header-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.repo-detail-panel__header-corner {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #6e786a;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.repo-detail-panel__header-corner svg {
+  width: 12px;
+  height: 12px;
+}
+
+.repo-detail-panel__heading-controls {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.repo-detail-panel__range-button {
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  color: #9ca593;
+  font-size: 0.68rem;
+}
+
+.repo-detail-panel__tab-group,
+.repo-detail-panel__mini-tabs,
+.repo-detail-panel__mode-tabs {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.repo-detail-panel__tab,
+.repo-detail-panel__mini-tab,
+.repo-detail-panel__mode-tab {
+  min-height: auto;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+}
+
+.repo-detail-panel__tab-group {
+  margin-bottom: 10px;
+}
+
+.repo-detail-panel__tab {
+  color: #8d9789;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.repo-detail-panel__tab--active,
+.repo-detail-panel__mini-tab--active,
+.repo-detail-panel__mode-tab--active {
+  color: var(--color-accent);
+  background: rgba(184, 255, 59, 0.08);
+  border-color: rgba(184, 255, 59, 0.18);
+}
+
+.repo-detail-panel__mini-tab,
+.repo-detail-panel__mode-tab {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #8d9789;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.repo-detail-panel__chart-box {
+  min-width: 0;
+}
+
+.repo-detail-panel__trend-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 12px;
+  flex: 1;
+}
+
+.repo-detail-panel__chart-box--trend,
+.repo-detail-panel__chart-box--traffic {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.repo-detail-panel__trend-metrics {
+  display: grid;
+  gap: 8px;
+}
+
+.repo-detail-panel__trend-metric {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.repo-detail-panel__trend-metric:last-child {
+  border-bottom: 0;
+}
+
+.repo-detail-panel__trend-metric span,
+.repo-detail-panel__trend-metric small {
+  display: block;
+  color: #7d8779;
+  font-size: 0.66rem;
+}
+
+.repo-detail-panel__trend-metric strong {
+  display: block;
+  margin-top: 8px;
+  color: #edf2e8;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.repo-detail-panel__trend-metric small {
+  margin-top: 6px;
+}
+
+.repo-detail-heatmap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.repo-detail-heatmap__legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #889286;
+  font-size: 0.66rem;
+}
+
+.repo-detail-heatmap__legend-scale {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.repo-detail-heatmap__legend-cell,
+.repo-detail-heatmap__cell {
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.repo-detail-heatmap__legend-cell {
+  width: 10px;
+  height: 10px;
+}
+
+.repo-detail-heatmap__legend-cell--0,
+.repo-detail-heatmap__cell--0 {
+  background: #1a1f1f;
+}
+
+.repo-detail-heatmap__legend-cell--1,
+.repo-detail-heatmap__cell--1 {
+  background: #354b1e;
+}
+
+.repo-detail-heatmap__legend-cell--2,
+.repo-detail-heatmap__cell--2 {
+  background: #557426;
+}
+
+.repo-detail-heatmap__legend-cell--3,
+.repo-detail-heatmap__cell--3 {
+  background: #86af2f;
+}
+
+.repo-detail-heatmap__legend-cell--4,
+.repo-detail-heatmap__cell--4 {
+  background: #c8f23a;
+}
+
+.repo-detail-heatmap__body {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+  flex: 1;
+}
+
+.repo-detail-heatmap__weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, 12px);
+  gap: 5px;
+  padding-top: 2px;
+}
+
+.repo-detail-heatmap__weekdays span {
+  color: #7c8579;
+  font-size: 0.62rem;
+  line-height: 12px;
+}
+
+.repo-detail-heatmap__main {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.repo-detail-heatmap__grid {
+  display: grid;
+  grid-template-columns: repeat(53, 3px);
+  grid-template-rows: repeat(7, 3px);
+  gap: 2px;
+  align-content: start;
+  min-width: max-content;
+}
+
+.repo-detail-heatmap__cell {
+  width: 3px;
+  height: 3px;
+}
+
+.repo-detail-heatmap__months {
+  display: grid;
+  grid-template-columns: repeat(53, 3px);
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.repo-detail-heatmap__months span {
+  color: #7d8779;
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.repo-detail-panel__summary-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 10px;
+  color: #83907f;
+  font-size: 0.7rem;
+}
+
+.repo-detail-stack {
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+}
+
+.repo-detail-stack__chart {
+  min-width: 0;
+}
+
+.repo-detail-stack__legend {
+  display: grid;
+  gap: 10px;
+}
+
+.repo-detail-stack__legend-item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.repo-detail-stack__legend-item strong,
+.repo-detail-stack__legend-item em {
+  font-size: 0.7rem;
+  font-style: normal;
+}
+
+.repo-detail-stack__legend-item strong {
+  color: #d9ded5;
+}
+
+.repo-detail-stack__legend-item em {
+  color: #879184;
+}
+
+.repo-detail-stack__legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.repo-detail-stack__legend-dot--0 {
+  background: #c5e832;
+}
+
+.repo-detail-stack__legend-dot--1 {
+  background: #8fda6b;
+}
+
+.repo-detail-stack__legend-dot--2 {
+  background: #668cff;
+}
+
+.repo-detail-stack__legend-dot--3 {
+  background: #7d85ff;
+}
+
+.repo-detail-stack__legend-dot--4 {
+  background: #f4c44e;
+}
+
+.repo-detail-stack__legend-dot--5 {
+  background: #5ab8ff;
+}
+
+.repo-detail-stack__tags {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.repo-detail-stack__tags-title {
+  display: block;
+  color: #7b8678;
+  font-size: 0.7rem;
+}
+
+.repo-detail-stack__tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.repo-detail-stack__tag-list span {
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(184, 255, 59, 0.06);
+  border: 1px solid rgba(184, 255, 59, 0.1);
+  color: #d6dccf;
+  font-size: 0.66rem;
+}
+
+.repo-detail-traffic__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.repo-detail-traffic__metric {
+  min-width: 0;
+}
+
+.repo-detail-traffic__metric span,
+.repo-detail-traffic__metric small {
+  display: block;
+  color: #7b8678;
+  font-size: 0.66rem;
+}
+
+.repo-detail-traffic__metric strong {
+  display: block;
+  margin-top: 7px;
+  color: #eef3ea;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.repo-detail-traffic__metric small {
+  margin-top: 6px;
+}
+
+.repo-detail-list,
+.repo-detail-commit-list,
+.repo-detail-insight-list {
+  display: grid;
+  gap: 10px;
+  flex: 1;
+}
+
+.repo-detail-list__item,
+.repo-detail-commit-list__item,
+.repo-detail-insight-list__item {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.repo-detail-list__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+}
+
+.repo-detail-list__main {
+  min-width: 0;
+}
+
+.repo-detail-list__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.repo-detail-list__title-row strong {
+  font-size: 0.76rem;
+}
+
+.repo-detail-list__main p {
+  margin: 6px 0 0;
+  color: #7c857b;
+  font-size: 0.68rem;
+  line-height: 1.55;
+  word-break: break-all;
+}
+
+.repo-detail-list__date {
+  color: #7d887d;
+  font-size: 0.66rem;
+}
+
+.repo-detail-list__badge {
+  min-height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(184, 255, 59, 0.12);
+  color: var(--color-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+}
+
+.repo-detail-commit-list__item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+}
+
+.repo-detail-commit-list__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(86, 167, 255, 0.14);
+  color: #dbf0ff;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.repo-detail-commit-list__copy {
+  min-width: 0;
+}
+
+.repo-detail-commit-list__copy strong,
+.repo-detail-commit-list__copy span,
+.repo-detail-commit-list__item em {
+  display: block;
+}
+
+.repo-detail-commit-list__copy strong {
+  font-size: 0.74rem;
+}
+
+.repo-detail-commit-list__copy span,
+.repo-detail-commit-list__item em {
+  color: #7d877b;
+  font-size: 0.66rem;
+}
+
+.repo-detail-commit-list__copy span {
+  margin-top: 6px;
+}
+
+.repo-detail-commit-list__item em {
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.repo-detail-insight-list__item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+
+.repo-detail-insight-list__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.repo-detail-insight-list__icon--focus {
+  background: rgba(139, 209, 46, 0.12);
+  color: #91d331;
+}
+
+.repo-detail-insight-list__icon--up {
+  background: rgba(212, 167, 44, 0.12);
+  color: #d7af3d;
+}
+
+.repo-detail-insight-list__icon--risk {
+  background: rgba(217, 108, 63, 0.14);
+  color: #ff9d7a;
+}
+
+.repo-detail-insight-list__copy {
+  min-width: 0;
+}
+
+.repo-detail-insight-list__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.repo-detail-insight-list__title-row strong {
+  font-size: 0.76rem;
+}
+
+.repo-detail-insight-list__title-row em {
+  min-height: 18px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  color: #b6bdb1;
+  font-size: 0.56rem;
+  font-style: normal;
+  text-transform: lowercase;
+}
+
+.repo-detail-insight-list__copy p {
+  margin: 8px 0 0;
+  color: #7e887d;
+  font-size: 0.68rem;
+  line-height: 1.65;
+}
+
+.repo-detail-panel__footlink {
+  display: inline-flex;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 10px;
+  color: var(--color-accent);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.repo-detail-panel__footlink:hover {
+  color: #d9ff62;
+}
+
+@media (max-width: 1180px) {
+  .repo-detail-hero__body,
+  .repo-detail-grid--primary,
+  .repo-detail-grid--secondary {
+    grid-template-columns: 1fr;
+  }
+
+  .repo-detail-hero__meta,
+  .repo-detail-hero__score {
+    padding-left: 0;
+  }
+
+  .repo-detail-hero__meta::before,
+  .repo-detail-hero__score::before {
+    display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .repo-detail-hero__score,
+  .repo-detail-panel__trend-layout,
+  .repo-detail-stack,
+  .repo-detail-traffic__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .repo-detail-panel__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .repo-detail-panel__header-side {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .repo-detail-heatmap__body {
+    grid-template-columns: 1fr;
+  }
+
+  .repo-detail-heatmap__weekdays {
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .repo-detail-hero {
+    padding-inline: 14px;
+  }
+
+  .repo-detail-hero__actions,
+  .repo-detail-hero__stats,
+  .repo-detail-hero__nav {
+    flex-wrap: wrap;
+  }
+
+  .repo-detail-hero__title-row h1 {
+    font-size: 1.7rem;
+  }
+
+  .repo-detail-commit-list__item,
+  .repo-detail-list__item {
+    grid-template-columns: 1fr;
+  }
+}

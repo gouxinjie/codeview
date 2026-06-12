@@ -1,0 +1,27 @@
+{
+  "name": "@asset-console/web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "..\\..\\node_modules\\.bin\\vite.cmd",
+    "build": "..\\..\\node_modules\\.bin\\tsc.cmd -p tsconfig.json && ..\\..\\node_modules\\.bin\\vite.cmd build",
+    "typecheck": "..\\..\\node_modules\\.bin\\tsc.cmd -p tsconfig.json --noEmit",
+    "preview": "..\\..\\node_modules\\.bin\\vite.cmd preview"
+  },
+  "dependencies": {
+    "echarts": "^5.6.0",
+    "echarts-for-react": "^3.0.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.6.1",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.20",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.4.1",
+    "sass": "^1.89.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

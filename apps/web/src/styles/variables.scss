@@ -1,0 +1,18 @@
+/* 文件说明：全局主题变量。 */
+/* 样式说明：统一管理颜色、字体和阴影。 */
+/* 关键布局说明：使用 CSS 变量在页面和组件间复用。 */
+:root {
+  --color-bg: #111315;
+  --color-surface: #181b1f;
+  --color-surface-soft: #1f2328;
+  --color-border: #2a2e34;
+  --color-text-primary: #f3ebdd;
+  --color-text-secondary: #9a9488;
+  --color-accent: #b8ff3b;
+  --color-warn: #d96c3f;
+  --font-display: 'Space Grotesk', 'Sora', sans-serif;
+  --font-body: 'Noto Sans SC', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --shadow-panel: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+

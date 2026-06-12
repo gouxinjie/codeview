@@ -1,0 +1,34 @@
+/* 文件说明：状态标签样式。 */
+/* 样式说明：通过颜色和小圆点表达状态。 */
+/* 关键布局说明：内容水平排列，保持紧凑。 */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  font-size: 0.8rem;
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.status-badge__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-secondary);
+}
+
+.status-badge--success .status-badge__dot {
+  background: var(--color-accent);
+}
+
+.status-badge--running .status-badge__dot {
+  background: var(--color-warn);
+}
+
+.status-badge--failed .status-badge__dot {
+  background: #ff7a52;
+}
+

@@ -1,0 +1,18 @@
+/* 文件说明：标签墙样式。 */
+/* 样式说明：适用于技术栈标签与筛选标签。 */
+/* 关键布局说明：使用换行流式布局。 */
+.tag-wall {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag-wall__item {
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: rgba(184, 255, 59, 0.06);
+  color: var(--color-text-primary);
+  font-size: 0.82rem;
+}
+

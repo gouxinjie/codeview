@@ -1,0 +1,21 @@
+{
+  "name": "asset-console",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/server",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace @asset-console/server\" \"npm run dev --workspace @asset-console/web\"",
+    "dev:server": "npm run dev --workspace @asset-console/server",
+    "dev:web": "npm run dev --workspace @asset-console/web",
+    "build": "npm run build --workspace @asset-console/server && npm run build --workspace @asset-console/web",
+    "typecheck": "npm run typecheck --workspace @asset-console/server && npm run typecheck --workspace @asset-console/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "typescript": "^5.8.3"
+  }
+}
+

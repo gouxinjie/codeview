@@ -1,0 +1,27 @@
+/* 文件说明：顶部 KPI 卡片样式。 */
+/* 样式说明：强调数值信息，并保留补充说明。 */
+/* 关键布局说明：采用纵向排版，突出数字。 */
+.metric-card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+  background:
+    linear-gradient(135deg, rgba(184, 255, 59, 0.04), rgba(0, 0, 0, 0)),
+    var(--color-surface);
+}
+
+.metric-card__label,
+.metric-card__hint {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.metric-card__value {
+  display: block;
+  margin: 10px 0 8px;
+  font-family: var(--font-mono);
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--color-text-primary);
+}
+

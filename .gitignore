@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.local
+data
+coverage
+*.log
+.tmp
+.tmp/
+.tmp-*.png
+apps/web/src/**/*.js

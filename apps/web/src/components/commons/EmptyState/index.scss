@@ -1,0 +1,25 @@
+/* 文件说明：空状态和错误状态样式。 */
+/* 样式说明：用于强调说明文案，不喧宾夺主。 */
+/* 关键布局说明：纵向居中排列。 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 180px;
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+  padding: 18px;
+  color: var(--color-text-secondary);
+}
+
+.empty-state__title {
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+}
+
+.empty-state__description {
+  margin: 10px 0 0;
+  line-height: 1.7;
+}
+
