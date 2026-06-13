@@ -2,7 +2,7 @@ import { subDays } from 'date-fns';
 import { db } from '@/database/client';
 import { getConfig, getDecryptedToken, updateLastSyncedAt } from '@/modules/config/config.service';
 import { logger } from '@/utils/logger';
-import { escapeHtml } from '@/utils/security';
+import { escapeHtml, unescapeHtml } from '@/utils/security';
 import { DEFAULT_TIMEZONE, getDayKey, getDaysFromNow, getMonthKey, getWeekKey } from '@/utils/time';
 import {
   fetchGitHubRepos,
@@ -477,7 +477,7 @@ function detectStackTags(repoId: number): StackTagRecord[] {
   for (const file of files) {
     if (file.file_path === 'package.json') {
       try {
-        const packageJson = JSON.parse(file.content) as {
+        const packageJson = JSON.parse(unescapeHtml(file.content)) as {
           dependencies?: Record<string, string>;
           devDependencies?: Record<string, string>;
         };
@@ -518,6 +518,14 @@ function detectStackTags(repoId: number): StackTagRecord[] {
 
   if (tokenSet.has('vue') && tokenSet.has('vite')) {
     tags.push({ tag: 'Vue + Vite', confidence: 0.96, source: 'package.json' });
+  }
+
+  if (tokenSet.has('vitepress')) {
+    tags.push({ tag: 'VitePress', confidence: 0.95, source: 'package.json' });
+  }
+
+  if (tokenSet.has('vue')) {
+    tags.push({ tag: 'Vue', confidence: 0.9, source: 'package.json' });
   }
 
   if (tokenSet.has('@nestjs/core') || tokenSet.has('@nestjs/common')) {

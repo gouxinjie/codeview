@@ -10,6 +10,16 @@ export function escapeHtml(value: string): string {
     .replaceAll("'", '&#39;');
 }
 
+/* 将已转义的 HTML 文本还原，供服务端内部解析结构化文件内容使用。*/
+export function unescapeHtml(value: string): string {
+  return value
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#39;', "'")
+    .replaceAll('&gt;', '>')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&amp;', '&');
+}
+
 function buildKey(secret: string): Buffer {
   return crypto.createHash('sha256').update(secret).digest();
 }
@@ -52,4 +62,3 @@ export function decryptValue(payload: string, secret: string): string {
 
   return decrypted.toString('utf8');
 }
-

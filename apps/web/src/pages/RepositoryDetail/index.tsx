@@ -23,7 +23,7 @@ import {
   fetchRepositoryTraffic
 } from '@/utils/api';
 import { formatDateTime, formatNumber } from '@/utils/date';
-import { buildHeatmapMatrix, getLongestHeatmapStreak, sumHeatmapCount } from '@/utils/heatmap';
+import { buildHeatmapMatrix, buildHeatmapMonthLabels, getLongestHeatmapStreak, sumHeatmapCount } from '@/utils/heatmap';
 import './index.scss';
 
 type TrendGranularity = 'day' | 'week' | 'month';
@@ -74,7 +74,7 @@ interface HeroFieldProps {
 interface HeroMetricProps {
   icon: JSX.Element;
   value: string;
-  label: string;
+  label?: string;
 }
 
 interface ScoreBarProps {
@@ -86,6 +86,7 @@ interface TrendMetricProps {
   label: string;
   value: string;
   hint: string;
+  compact?: boolean;
 }
 
 const SECTION_TABS: string[] = ['概览', '提交分析', '热力图', '技术栈', '经营数据', '文件分析', '洞察与建议', '设置'];
@@ -254,6 +255,7 @@ function RepositoryDetailPage(): JSX.Element {
   }, [dayActivity, detail]);
 
   const heatmapMatrix = useMemo(() => buildHeatmapMatrix(heatmap), [heatmap]);
+  const heatmapMonthLabels = useMemo(() => buildHeatmapMonthLabels(heatmapMatrix.months), [heatmapMatrix.months]);
 
   const trafficMetrics = useMemo<TrafficMetricItem[]>(
     () =>
@@ -387,7 +389,6 @@ function RepositoryDetailPage(): JSX.Element {
           <section className="repo-detail-hero__overview">
             <div className="repo-detail-hero__identity">
               <div className="repo-detail-hero__icon" aria-hidden="true">
-                <span className="repo-detail-hero__icon-mark">{buildRepoInitials(detail.name)}</span>
                 <RepoIcon />
               </div>
 
@@ -410,8 +411,8 @@ function RepositoryDetailPage(): JSX.Element {
             </div>
 
             <div className="repo-detail-hero__stats">
-              <HeroMetric icon={<StarIcon />} value={formatCompactMetric(detail.starsCount)} label="Star" />
-              <HeroMetric icon={<BranchIcon />} value={formatCompactMetric(detail.forksCount)} label="Fork" />
+              <HeroMetric icon={<StarIcon />} value={formatCompactMetric(detail.starsCount)} />
+              <HeroMetric icon={<BranchIcon />} value={formatCompactMetric(detail.forksCount)} />
               <HeroMetric icon={<EyeIcon />} value={formatCompactMetric(detail.trafficSummary.views14d)} label="浏览" />
             </div>
           </section>
@@ -430,6 +431,7 @@ function RepositoryDetailPage(): JSX.Element {
           </section>
 
           <section className="repo-detail-hero__score">
+            <div className="repo-detail-hero__score-card">
             <div className="repo-detail-hero__score-panel">
               <span className="repo-detail-hero__score-label">项目评分</span>
               <ScoreRing variant="detail" score={detail.score} suffix="/100" />
@@ -439,6 +441,7 @@ function RepositoryDetailPage(): JSX.Element {
               {scoreMetrics.map((item) => (
                 <ScoreBar key={item.label} label={item.label} value={item.value} />
               ))}
+            </div>
             </div>
           </section>
         </div>
@@ -462,7 +465,6 @@ function RepositoryDetailPage(): JSX.Element {
             variant="detail"
             title="提交趋势"
             accessory={<span className="repo-detail-panel__range-chip">近 30 天</span>}
-            corner={<ChevronRightIcon />}
           />
 
           <div className="repo-detail-panel__tab-group">
@@ -482,14 +484,20 @@ function RepositoryDetailPage(): JSX.Element {
             <div className="repo-detail-trend__chart">
               <ReactECharts
                 option={buildRepositoryTrendOption(activeSeries)}
-                style={{ height: 248 }}
+                style={{ width: '100%', height: '100%', minHeight: 242 }}
                 opts={{ renderer: 'svg' }}
               />
             </div>
 
             <div className="repo-detail-trend__metrics">
-              {trendMetrics.map((item) => (
-                <TrendMetric key={item.label} label={item.label} value={item.value} hint={item.hint} />
+              {trendMetrics.map((item, index) => (
+                <TrendMetric
+                  key={item.label}
+                  label={item.label}
+                  value={item.value}
+                  hint={item.hint}
+                  compact={index === trendMetrics.length - 1}
+                />
               ))}
             </div>
           </div>
@@ -510,7 +518,6 @@ function RepositoryDetailPage(): JSX.Element {
                 <span>多</span>
               </div>
             }
-            corner={<ChevronRightIcon />}
           />
 
           {heatmap.length > 0 ? (
@@ -538,9 +545,9 @@ function RepositoryDetailPage(): JSX.Element {
                   </div>
 
                   <div className="repo-detail-heatmap__months">
-                    {heatmapMatrix.months.map((item) => (
-                      <span key={`${item.label}-${item.column}`} style={{ gridColumn: `${item.column + 1} / span 4` }}>
-                        {item.label}
+                    {heatmapMonthLabels.map((item) => (
+                      <span key={item}>
+                        {item}
                       </span>
                     ))}
                   </div>
@@ -573,7 +580,6 @@ function RepositoryDetailPage(): JSX.Element {
                 ))}
               </div>
             }
-            corner={<ChevronRightIcon />}
           />
 
           {languageChartItems.length > 0 ? (
@@ -582,7 +588,7 @@ function RepositoryDetailPage(): JSX.Element {
                 <div className="repo-detail-stack__chart">
                   <ReactECharts
                     option={buildRepositoryLanguageDonutOption(languageChartItems)}
-                    style={{ height: 224 }}
+                    style={{ height: 180 }}
                     opts={{ renderer: 'svg' }}
                   />
                 </div>
@@ -762,15 +768,12 @@ function HeroField(props: HeroFieldProps): JSX.Element {
 }
 
 function HeroMetric(props: HeroMetricProps): JSX.Element {
-  const { icon, label, value } = props;
+  const { icon, value } = props;
 
   return (
     <div className="repo-detail-hero__metric">
       <span className="repo-detail-hero__metric-icon">{icon}</span>
-      <div className="repo-detail-hero__metric-copy">
-        <strong>{value}</strong>
-        <small>{label}</small>
-      </div>
+      <strong>{value}</strong>
     </div>
   );
 }
@@ -790,10 +793,10 @@ function ScoreBar(props: ScoreBarProps): JSX.Element {
 }
 
 function TrendMetric(props: TrendMetricProps): JSX.Element {
-  const { label, value, hint } = props;
+  const { label, value, hint, compact } = props;
 
   return (
-    <div className="repo-detail-trend__metric">
+    <div className={compact ? 'repo-detail-trend__metric repo-detail-trend__metric--compact' : 'repo-detail-trend__metric'}>
       <span>{label}</span>
       <strong>{value}</strong>
       <small>{hint}</small>
@@ -804,10 +807,18 @@ function TrendMetric(props: TrendMetricProps): JSX.Element {
 function RepoIcon(): JSX.Element {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7.5 6.5h2.9l1.7 4.1 1.8-4.1H17l-3.2 6.3 2.4 4.8h-2.9l-1.2-2.8-1.2 2.8H8l2.4-4.8-2.9-6.3Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      <circle cx="7" cy="6.8" r="1.2" fill="currentColor" />
-      <circle cx="17" cy="6.8" r="1.2" fill="currentColor" />
-      <circle cx="12" cy="17.5" r="1.2" fill="currentColor" />
+      <path
+        d="M6.4 6.4 12 18l5.6-11.6M8.9 11.5h6.2M12 18l-4.5-3.6M12 18l4.5-3.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="6.4" cy="6.4" r="1.8" fill="currentColor" />
+      <circle cx="17.6" cy="6.4" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="18" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="11.5" r="1.45" fill="currentColor" />
     </svg>
   );
 }
@@ -934,15 +945,22 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
       trigger: 'axis',
       backgroundColor: '#0d1114',
       borderColor: 'rgba(184,255,59,0.18)',
+      axisPointer: {
+        type: 'line',
+        lineStyle: {
+          color: 'rgba(184,255,59,0.24)',
+          type: 'dashed'
+        }
+      },
       textStyle: {
         color: '#f3ebdd'
       }
     },
     grid: {
-      top: 18,
-      left: 32,
-      right: 14,
-      bottom: 24
+      top: 12,
+      left: 30,
+      right: 6,
+      bottom: 20
     },
     xAxis: {
       type: 'category',
@@ -950,6 +968,9 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
       axisLabel: {
         color: '#7e887e',
         fontSize: 10
+      },
+      axisTick: {
+        show: false
       },
       axisLine: {
         lineStyle: {
@@ -963,6 +984,12 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
         color: '#7e887e',
         fontSize: 10
       },
+      axisTick: {
+        show: false
+      },
+      axisLine: {
+        show: false
+      },
       splitLine: {
         lineStyle: {
           color: 'rgba(255,255,255,0.05)'
@@ -974,10 +1001,10 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 6,
+        symbolSize: 5,
         lineStyle: {
           color: '#b9ec2d',
-          width: 2
+          width: 1.8
         },
         itemStyle: {
           color: '#d3ff48',
@@ -985,7 +1012,17 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
           borderWidth: 1
         },
         areaStyle: {
-          color: 'rgba(185, 236, 45, 0.14)'
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(185, 236, 45, 0.26)' },
+              { offset: 1, color: 'rgba(185, 236, 45, 0.02)' }
+            ]
+          }
         },
         data: sliced.map((item) => item.count)
       }
@@ -1124,32 +1161,37 @@ function buildRepositoryLanguageDonutOption(
         color: '#f3ebdd'
       }
     },
-    title: {
-      text: topLanguage
-        ? `主要语言\n${topLanguage.language}\n${topLanguage.percentage.toFixed(1)}%`
-        : '暂无数据',
-      left: 'center',
-      top: '38%',
-      textAlign: 'center',
-      textStyle: {
-        color: '#f3ebdd',
-        fontSize: 13,
-        fontWeight: 600,
-        lineHeight: 20
+    graphic: [
+      {
+        type: 'text',
+        left: 'center',
+        top: 'center',
+        z: 10,
+        style: {
+          text: topLanguage
+            ? `主要语言\n${topLanguage.language}\n${topLanguage.percentage.toFixed(1)}%`
+            : '暂无数据',
+          fill: '#f3ebdd',
+          fontSize: 12,
+          fontWeight: 600,
+          lineHeight: 18,
+          align: 'center',
+          verticalAlign: 'middle'
+        }
       }
-    },
+    ],
     series: [
       {
         type: 'pie',
-        radius: ['55%', '74%'],
+        radius: ['58%', '78%'],
         center: ['50%', '52%'],
-        startAngle: 96,
+        startAngle: 92,
         label: {
           show: false
         },
         itemStyle: {
           borderColor: '#0f1317',
-          borderWidth: 2
+          borderWidth: 1.6
         },
         data: data.map((item) => ({
           name: item.language,
@@ -1277,20 +1319,6 @@ function formatRelativeTime(value: string): string {
   }
 
   return formatDateLabel(value);
-}
-
-function buildRepoInitials(name: string): string {
-  const segments = name
-    .split(/[-_\s]/)
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-    .slice(0, 2);
-
-  if (segments.length === 0) {
-    return 'CV';
-  }
-
-  return segments.map((item) => item.slice(0, 1).toUpperCase()).join('');
 }
 
 function extractFileName(filePath: string): string {
