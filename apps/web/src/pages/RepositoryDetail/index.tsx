@@ -29,18 +29,24 @@ import './index.scss';
 type TrendGranularity = 'day' | 'week' | 'month';
 type RecommendationLevel = 'focus' | 'up' | 'risk';
 
-interface ScoreMetricItem {
-  label: string;
-  value: number;
-}
-
 interface HeroFieldItem {
   label: string;
   value: string;
   href?: string;
 }
 
+interface ScoreMetricItem {
+  label: string;
+  value: number;
+}
+
 interface TrendMetricItem {
+  label: string;
+  value: string;
+  hint: string;
+}
+
+interface TrafficMetricItem {
   label: string;
   value: string;
   hint: string;
@@ -65,19 +71,30 @@ interface HeroFieldProps {
   href?: string;
 }
 
+interface HeroMetricProps {
+  icon: JSX.Element;
+  value: string;
+  label: string;
+}
+
+interface ScoreBarProps {
+  label: string;
+  value: number;
+}
+
 interface TrendMetricProps {
   label: string;
   value: string;
   hint: string;
 }
 
-const SECTION_TABS = ['概览', '提交分析', '热力图', '技术栈', '经营数据', '文件分析', '洞察与建议', '设置'];
-const STACK_TABS = ['语言分布', '技术栈标签', '依赖文件'];
+const SECTION_TABS: string[] = ['概览', '提交分析', '热力图', '技术栈', '经营数据', '文件分析', '洞察与建议', '设置'];
+const STACK_TABS: string[] = ['语言分布', '技术栈标签', '依赖文件'];
 
 /**
  * 页面说明：项目详情页。
  * Props 类型：无。
- * 含义：按设计图重构项目详情的头部画像、趋势分析和底部卡片布局。
+ * 含义：按原型图重构项目详情页面，展示仓库概览、趋势、热力图、技术栈和洞察信息。
  * 是否必填：无。
  * 默认值：无。
  */
@@ -172,15 +189,6 @@ function RepositoryDetailPage(): JSX.Element {
     return dayActivity;
   }, [dayActivity, granularity, monthActivity, weekActivity]);
 
-  const summaryTags = useMemo(() => {
-    if (!detail || !stack) {
-      return [];
-    }
-
-    const mergedTags = [detail.mainLanguage, ...stack.tags.map((item) => item.tag)].filter((item) => item.trim().length > 0);
-    return [...new Set(mergedTags)].slice(0, 6);
-  }, [detail, stack]);
-
   const heroFields = useMemo<HeroFieldItem[]>(() => {
     if (!detail) {
       return [];
@@ -194,7 +202,21 @@ function RepositoryDetailPage(): JSX.Element {
     ];
   }, [detail]);
 
-  const scoreMetrics = useMemo(() => {
+  const heroTags = useMemo(() => {
+    if (!detail || !stack) {
+      return [];
+    }
+
+    const candidates = [
+      detail.mainLanguage,
+      ...stack.tags.map((item) => item.tag),
+      ...detail.languages.map((item) => item.language)
+    ].filter((item) => item.trim().length > 0);
+
+    return Array.from(new Set(candidates)).slice(0, 6);
+  }, [detail, stack]);
+
+  const scoreMetrics = useMemo<ScoreMetricItem[]>(() => {
     if (!detail || !stack) {
       return [];
     }
@@ -216,12 +238,12 @@ function RepositoryDetailPage(): JSX.Element {
       {
         label: '近 30 天提交数',
         value: formatNumber(detail.commitCount30d),
-        hint: '较上期保持稳定'
+        hint: '最近一个月开发节奏'
       },
       {
         label: '近 30 天活跃天数',
         value: formatNumber(detail.activeDays30d),
-        hint: '持续开发节奏'
+        hint: '持续维护能力'
       },
       {
         label: '最近提交时间',
@@ -233,14 +255,14 @@ function RepositoryDetailPage(): JSX.Element {
 
   const heatmapMatrix = useMemo(() => buildHeatmapMatrix(heatmap), [heatmap]);
 
-  const trafficMetrics = useMemo(
+  const trafficMetrics = useMemo<TrafficMetricItem[]>(
     () =>
       detail
         ? [
             {
               label: '访问量',
               value: formatCompactMetric(detail.trafficSummary.views14d),
-              hint: `较近 14 天 ${detail.trafficSummary.views14d > 0 ? '有有效曝光' : '暂无变化'}`
+              hint: '近 14 天累计'
             },
             {
               label: '独立访客',
@@ -257,7 +279,41 @@ function RepositoryDetailPage(): JSX.Element {
     [detail]
   );
 
-  const versionSnapshots = useMemo(() => buildVersionSnapshots(monthActivity, stack?.files ?? []), [monthActivity, stack]);
+  const languageChartItems = useMemo(
+    () => detail?.languages ?? [],
+    [detail?.languages]
+  );
+
+  const languageLegendItems = useMemo(
+    () => languageChartItems.slice(0, 6),
+    [languageChartItems]
+  );
+
+  const stackOverviewTags = useMemo(() => {
+    if (!stack) {
+      return [];
+    }
+
+    const candidates = [
+      ...stack.tags.map((item) => item.tag),
+      ...heroTags
+    ].filter((item) => item.trim().length > 0);
+
+    return Array.from(new Set(candidates)).slice(0, 8);
+  }, [heroTags, stack]);
+
+  const stackFileNames = useMemo(() => {
+    if (!stack) {
+      return [];
+    }
+
+    return stack.files.slice(0, 4).map((item) => extractFileName(item.filePath));
+  }, [stack]);
+
+  const versionSnapshots = useMemo(
+    () => buildVersionSnapshots(monthActivity, stack?.files ?? []),
+    [monthActivity, stack?.files]
+  );
 
   const recommendations = useMemo<RecommendationItem[]>(() => {
     if (!detail || !stack) {
@@ -277,8 +333,8 @@ function RepositoryDetailPage(): JSX.Element {
     if (detail.mainLanguage.trim().length > 0) {
       items.push({
         level: 'up',
-        title: '技术栈持续收敛',
-        summary: `${detail.mainLanguage} 仍是主力语言，${stack.tags.slice(0, 2).map((item) => item.tag).join('、') || '核心标签已形成'}，项目识别度较高。`
+        title: '技术栈识别度较高',
+        summary: `${detail.mainLanguage} 仍是主力语言，${stack.tags.slice(0, 3).map((item) => item.tag).join('、') || '核心标签已形成'}，项目识别度较强。`
       });
     }
 
@@ -288,11 +344,13 @@ function RepositoryDetailPage(): JSX.Element {
       summary:
         detail.trafficSummary.views14d > 0
           ? `近 14 天访问量 ${formatNumber(detail.trafficSummary.views14d)}，说明仓库已经具备一定展示价值。`
-          : '近 14 天暂无明显访问数据，建议补充 README、演示地址和项目亮点说明。'
+          : '近 14 天暂无明显流量数据，建议补充 README、演示地址和项目亮点说明。'
     });
 
     return items.slice(0, 3);
   }, [detail, stack]);
+
+  const commitPreview = useMemo(() => recentCommits.slice(0, 4), [recentCommits]);
 
   if (loading) {
     return <LoadingBlock text="正在加载项目详情" />;
@@ -315,20 +373,21 @@ function RepositoryDetailPage(): JSX.Element {
             <StarIcon />
             <span>Star</span>
           </a>
-          <button type="button" className="repo-detail-hero__action repo-detail-hero__action--ghost">
+          <a className="repo-detail-hero__action repo-detail-hero__action--ghost" href={`${detail.htmlUrl}/watchers`} target="_blank" rel="noreferrer">
             <EyeIcon />
-            <span>取消关注</span>
-          </button>
-          <button type="button" className="repo-detail-hero__action repo-detail-hero__action--ghost">
+            <span>收藏关注</span>
+          </a>
+          <a className="repo-detail-hero__action repo-detail-hero__action--ghost" href={`${detail.htmlUrl}/commits`} target="_blank" rel="noreferrer">
             <SyncIcon />
-            <span>手动同步</span>
-          </button>
+            <span>查看提交</span>
+          </a>
         </div>
 
         <div className="repo-detail-hero__body">
-          <section className="repo-detail-hero__summary">
+          <section className="repo-detail-hero__overview">
             <div className="repo-detail-hero__identity">
-              <div className="repo-detail-hero__icon">
+              <div className="repo-detail-hero__icon" aria-hidden="true">
+                <span className="repo-detail-hero__icon-mark">{buildRepoInitials(detail.name)}</span>
                 <RepoIcon />
               </div>
 
@@ -337,22 +396,23 @@ function RepositoryDetailPage(): JSX.Element {
                   <h1>{detail.name}</h1>
                   <span className="repo-detail-hero__badge">Public</span>
                 </div>
-                <p className="repo-detail-hero__tagline">{detail.description || 'CodeView 项目数据看板'}</p>
+                <p className="repo-detail-hero__subtitle">{detail.fullName}</p>
+                <p className="repo-detail-hero__tagline">{detail.description || '个人项目数据资产看板系统'}</p>
               </div>
             </div>
 
             <div className="repo-detail-hero__tags">
-              {summaryTags.map((item, index) => (
-                <span key={item} className={`repo-detail-hero__tag repo-detail-hero__tag--${index % 4}`}>
+              {heroTags.map((item, index) => (
+                <span key={item} className={`repo-detail-hero__tag repo-detail-hero__tag--${index % 5}`}>
                   {item}
                 </span>
               ))}
             </div>
 
             <div className="repo-detail-hero__stats">
-              <HeroMetric icon={<StarIcon />} value={formatCompactMetric(detail.starsCount)} />
-              <HeroMetric icon={<BranchIcon />} value={formatCompactMetric(detail.forksCount)} />
-              <HeroMetric icon={<EyeIcon />} value={formatCompactMetric(detail.trafficSummary.views14d)} />
+              <HeroMetric icon={<StarIcon />} value={formatCompactMetric(detail.starsCount)} label="Star" />
+              <HeroMetric icon={<BranchIcon />} value={formatCompactMetric(detail.forksCount)} label="Fork" />
+              <HeroMetric icon={<EyeIcon />} value={formatCompactMetric(detail.trafficSummary.views14d)} label="浏览" />
             </div>
           </section>
 
@@ -365,7 +425,7 @@ function RepositoryDetailPage(): JSX.Element {
 
             <div className="repo-detail-hero__description">
               <span>描述</span>
-              <p>{detail.description || '一个基于 GitHub 数据的 CodeView 看板，帮助开发者查看活跃度、技术栈和经营效果。'}</p>
+              <p>{detail.description || '一个用于观察项目活跃度、技术栈和基础经营数据的可视化仓库。'}</p>
             </div>
           </section>
 
@@ -377,13 +437,7 @@ function RepositoryDetailPage(): JSX.Element {
 
             <div className="repo-detail-hero__score-bars">
               {scoreMetrics.map((item) => (
-                <div key={item.label} className="repo-detail-hero__score-row">
-                  <span>{item.label}</span>
-                  <div className="repo-detail-hero__score-track">
-                    <i style={{ width: `${item.value}%` }} />
-                  </div>
-                  <strong>{item.value}</strong>
-                </div>
+                <ScoreBar key={item.label} label={item.label} value={item.value} />
               ))}
             </div>
           </section>
@@ -407,13 +461,7 @@ function RepositoryDetailPage(): JSX.Element {
           <PanelHeading
             variant="detail"
             title="提交趋势"
-            accessory={
-              <div className="repo-detail-panel__heading-controls">
-                <button type="button" className="repo-detail-panel__range-button">
-                  近 30 天
-                </button>
-              </div>
-            }
+            accessory={<span className="repo-detail-panel__range-chip">近 30 天</span>}
             corner={<ChevronRightIcon />}
           />
 
@@ -422,11 +470,7 @@ function RepositoryDetailPage(): JSX.Element {
               <button
                 key={item}
                 type="button"
-                className={
-                  item === granularity
-                    ? 'repo-detail-panel__tab repo-detail-panel__tab--active'
-                    : 'repo-detail-panel__tab'
-                }
+                className={item === granularity ? 'repo-detail-panel__tab repo-detail-panel__tab--active' : 'repo-detail-panel__tab'}
                 onClick={() => setGranularity(item)}
               >
                 {item === 'day' ? '日' : item === 'week' ? '周' : '月'}
@@ -434,16 +478,16 @@ function RepositoryDetailPage(): JSX.Element {
             ))}
           </div>
 
-          <div className="repo-detail-panel__trend-layout">
-            <div className="repo-detail-panel__chart-box repo-detail-panel__chart-box--trend">
+          <div className="repo-detail-trend">
+            <div className="repo-detail-trend__chart">
               <ReactECharts
                 option={buildRepositoryTrendOption(activeSeries)}
-                style={{ height: 246 }}
+                style={{ height: 248 }}
                 opts={{ renderer: 'svg' }}
               />
             </div>
 
-            <div className="repo-detail-panel__trend-metrics">
+            <div className="repo-detail-trend__metrics">
               {trendMetrics.map((item) => (
                 <TrendMetric key={item.label} label={item.label} value={item.value} hint={item.hint} />
               ))}
@@ -503,7 +547,7 @@ function RepositoryDetailPage(): JSX.Element {
                 </div>
               </div>
 
-              <div className="repo-detail-panel__summary-line">
+              <div className="repo-detail-heatmap__footer">
                 <span>总提交次数：{formatNumber(sumHeatmapCount(heatmap))}</span>
                 <span>最长连续提交天数：{formatNumber(getLongestHeatmapStreak(heatmap))} 天</span>
               </div>
@@ -522,11 +566,7 @@ function RepositoryDetailPage(): JSX.Element {
                 {STACK_TABS.map((item, index) => (
                   <span
                     key={item}
-                    className={
-                      index === 0
-                        ? 'repo-detail-panel__mini-tab repo-detail-panel__mini-tab--active'
-                        : 'repo-detail-panel__mini-tab'
-                    }
+                    className={index === 0 ? 'repo-detail-panel__mini-tab repo-detail-panel__mini-tab--active' : 'repo-detail-panel__mini-tab'}
                   >
                     {item}
                   </span>
@@ -536,19 +576,19 @@ function RepositoryDetailPage(): JSX.Element {
             corner={<ChevronRightIcon />}
           />
 
-          {detail.languages.length > 0 ? (
-            <>
-              <div className="repo-detail-stack">
+          {languageChartItems.length > 0 ? (
+            <div className="repo-detail-stack">
+              <div className="repo-detail-stack__top">
                 <div className="repo-detail-stack__chart">
                   <ReactECharts
-                    option={buildRepositoryLanguageDonutOption(detail.languages)}
-                    style={{ height: 220 }}
+                    option={buildRepositoryLanguageDonutOption(languageChartItems)}
+                    style={{ height: 224 }}
                     opts={{ renderer: 'svg' }}
                   />
                 </div>
 
                 <div className="repo-detail-stack__legend">
-                  {detail.languages.slice(0, 6).map((item, index) => (
+                  {languageLegendItems.map((item, index) => (
                     <div key={item.language} className="repo-detail-stack__legend-item">
                       <span className={`repo-detail-stack__legend-dot repo-detail-stack__legend-dot--${index % 6}`} />
                       <strong>{item.language}</strong>
@@ -558,15 +598,24 @@ function RepositoryDetailPage(): JSX.Element {
                 </div>
               </div>
 
-              <div className="repo-detail-stack__tags">
-                <span className="repo-detail-stack__tags-title">技术栈概览</span>
+              <div className="repo-detail-stack__block">
+                <span className="repo-detail-stack__block-title">技术栈概览</span>
                 <div className="repo-detail-stack__tag-list">
-                  {stack.tags.slice(0, 8).map((item) => (
-                    <span key={item.tag}>{item.tag}</span>
+                  {stackOverviewTags.map((item) => (
+                    <span key={item}>{item}</span>
                   ))}
                 </div>
               </div>
-            </>
+
+              <div className="repo-detail-stack__block">
+                <span className="repo-detail-stack__block-title">依赖文件</span>
+                <div className="repo-detail-stack__file-list">
+                  {stackFileNames.map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
             <EmptyState title="暂无技术栈数据" />
           )}
@@ -588,10 +637,10 @@ function RepositoryDetailPage(): JSX.Element {
           </div>
 
           {traffic.length > 0 ? (
-            <div className="repo-detail-panel__chart-box repo-detail-panel__chart-box--traffic">
+            <div className="repo-detail-traffic__chart">
               <ReactECharts
                 option={buildRepositoryTrafficOption(traffic)}
-                style={{ height: 182 }}
+                style={{ height: 190 }}
                 opts={{ renderer: 'svg' }}
               />
             </div>
@@ -603,7 +652,7 @@ function RepositoryDetailPage(): JSX.Element {
         <article className="repo-detail-panel repo-detail-panel--versions">
           <PanelHeading variant="detail" title="版本快照记录" corner={<ChevronRightIcon />} />
 
-          <div className="repo-detail-list repo-detail-list--versions">
+          <div className="repo-detail-list">
             {versionSnapshots.length > 0 ? (
               versionSnapshots.map((item) => (
                 <div key={`${item.title}-${item.date}`} className="repo-detail-list__item">
@@ -623,7 +672,8 @@ function RepositoryDetailPage(): JSX.Element {
           </div>
 
           <a className="repo-detail-panel__footlink" href={detail.htmlUrl} target="_blank" rel="noreferrer">
-            查看仓库详情
+            查看全部版本
+            <ExternalLinkIcon />
           </a>
         </article>
 
@@ -631,12 +681,12 @@ function RepositoryDetailPage(): JSX.Element {
           <PanelHeading variant="detail" title="最近提交记录" corner={<ChevronRightIcon />} />
 
           <div className="repo-detail-commit-list">
-            {recentCommits.length > 0 ? (
-              recentCommits.map((item) => (
+            {commitPreview.length > 0 ? (
+              commitPreview.map((item) => (
                 <div key={item.sha} className="repo-detail-commit-list__item">
                   <div className="repo-detail-commit-list__avatar">{getCommitInitial(item)}</div>
                   <div className="repo-detail-commit-list__copy">
-                    <strong>{trimText(item.message || item.sha, 24)}</strong>
+                    <strong>{trimText(item.message || item.sha, 30)}</strong>
                     <span>{item.authorLogin || item.authorName || 'unknown'}</span>
                   </div>
                   <em>{formatRelativeTime(item.commitTime)}</em>
@@ -649,6 +699,7 @@ function RepositoryDetailPage(): JSX.Element {
 
           <a className="repo-detail-panel__footlink" href={`${detail.htmlUrl}/commits`} target="_blank" rel="noreferrer">
             查看全部提交
+            <ExternalLinkIcon />
           </a>
         </article>
 
@@ -684,6 +735,7 @@ function RepositoryDetailPage(): JSX.Element {
 
           <a className="repo-detail-panel__footlink" href={detail.htmlUrl} target="_blank" rel="noreferrer">
             查看全部洞察
+            <ExternalLinkIcon />
           </a>
         </article>
       </section>
@@ -699,7 +751,8 @@ function HeroField(props: HeroFieldProps): JSX.Element {
       <span>{label}</span>
       {href ? (
         <a href={href} target="_blank" rel="noreferrer">
-          {value}
+          <strong>{value}</strong>
+          <ExternalLinkIcon />
         </a>
       ) : (
         <strong>{value}</strong>
@@ -708,12 +761,29 @@ function HeroField(props: HeroFieldProps): JSX.Element {
   );
 }
 
-function HeroMetric(props: { icon: JSX.Element; value: string }): JSX.Element {
-  const { icon, value } = props;
+function HeroMetric(props: HeroMetricProps): JSX.Element {
+  const { icon, label, value } = props;
 
   return (
     <div className="repo-detail-hero__metric">
-      {icon}
+      <span className="repo-detail-hero__metric-icon">{icon}</span>
+      <div className="repo-detail-hero__metric-copy">
+        <strong>{value}</strong>
+        <small>{label}</small>
+      </div>
+    </div>
+  );
+}
+
+function ScoreBar(props: ScoreBarProps): JSX.Element {
+  const { label, value } = props;
+
+  return (
+    <div className="repo-detail-hero__score-row">
+      <span>{label}</span>
+      <div className="repo-detail-hero__score-track">
+        <i style={{ width: `${value}%` }} />
+      </div>
       <strong>{value}</strong>
     </div>
   );
@@ -723,7 +793,7 @@ function TrendMetric(props: TrendMetricProps): JSX.Element {
   const { label, value, hint } = props;
 
   return (
-    <div className="repo-detail-panel__trend-metric">
+    <div className="repo-detail-trend__metric">
       <span>{label}</span>
       <strong>{value}</strong>
       <small>{hint}</small>
@@ -734,8 +804,10 @@ function TrendMetric(props: TrendMetricProps): JSX.Element {
 function RepoIcon(): JSX.Element {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3.4 4.5 7.5v9L12 20.6l7.5-4.1v-9L12 3.4Z" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M4.5 7.5 12 11l7.5-3.5M12 11v9.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M7.5 6.5h2.9l1.7 4.1 1.8-4.1H17l-3.2 6.3 2.4 4.8h-2.9l-1.2-2.8-1.2 2.8H8l2.4-4.8-2.9-6.3Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <circle cx="7" cy="6.8" r="1.2" fill="currentColor" />
+      <circle cx="17" cy="6.8" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="17.5" r="1.2" fill="currentColor" />
     </svg>
   );
 }
@@ -791,6 +863,14 @@ function SyncIcon(): JSX.Element {
   );
 }
 
+function ExternalLinkIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M14 5h5v5M10 14 19 5M19 13v5h-5M5 10V5h5M5 19h5v-5" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function InsightIcon(props: { level: RecommendationLevel }): JSX.Element {
   const { level } = props;
 
@@ -819,6 +899,11 @@ function InsightIcon(props: { level: RecommendationLevel }): JSX.Element {
   );
 }
 
+/**
+ * 函数说明：根据仓库活跃度、经营数据和技术栈信息生成评分维度。
+ * 参数说明：`detail` 为仓库详情，`stack` 为技术栈识别结果。
+ * 返回说明：返回可直接用于评分条渲染的数据数组。
+ */
 function buildScoreMetrics(detail: RepoDetail, stack: RepoStackDetail): ScoreMetricItem[] {
   const activityScore = clampScore((detail.activeDays30d / 30) * 100);
   const trafficScore = clampScore((detail.trafficSummary.views14d / 200) * 100);
@@ -835,6 +920,11 @@ function buildScoreMetrics(detail: RepoDetail, stack: RepoStackDetail): ScoreMet
   ];
 }
 
+/**
+ * 函数说明：构建提交趋势折线图配置。
+ * 参数说明：`data` 为按粒度聚合后的仓库提交数据。
+ * 返回说明：返回 ECharts 折线图配置对象。
+ */
 function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
   const sliced = data.slice(-30);
 
@@ -849,7 +939,7 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
       }
     },
     grid: {
-      top: 12,
+      top: 18,
       left: 32,
       right: 14,
       bottom: 24
@@ -895,7 +985,7 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
           borderWidth: 1
         },
         areaStyle: {
-          color: 'rgba(185, 236, 45, 0.12)'
+          color: 'rgba(185, 236, 45, 0.14)'
         },
         data: sliced.map((item) => item.count)
       }
@@ -903,6 +993,11 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
   };
 }
 
+/**
+ * 函数说明：构建经营数据趋势图配置。
+ * 参数说明：`data` 为仓库流量和克隆趋势数据。
+ * 返回说明：返回多折线图配置对象。
+ */
 function buildRepositoryTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
   const sliced = data.slice(-14);
 
@@ -927,10 +1022,10 @@ function buildRepositoryTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
       }
     },
     grid: {
-      top: 28,
-      left: 24,
+      top: 30,
+      left: 28,
       right: 12,
-      bottom: 20
+      bottom: 24
     },
     xAxis: {
       type: 'category',
@@ -1007,6 +1102,11 @@ function buildRepositoryTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
   };
 }
 
+/**
+ * 函数说明：构建技术栈语言分布环形图配置。
+ * 参数说明：`data` 为仓库语言分布数据。
+ * 返回说明：返回环形图配置对象。
+ */
 function buildRepositoryLanguageDonutOption(
   data: Array<{ language: string; percentage: number }>
 ): EChartsOption {
@@ -1029,7 +1129,7 @@ function buildRepositoryLanguageDonutOption(
         ? `主要语言\n${topLanguage.language}\n${topLanguage.percentage.toFixed(1)}%`
         : '暂无数据',
       left: 'center',
-      top: '37%',
+      top: '38%',
       textAlign: 'center',
       textStyle: {
         color: '#f3ebdd',
@@ -1041,9 +1141,9 @@ function buildRepositoryLanguageDonutOption(
     series: [
       {
         type: 'pie',
-        radius: ['54%', '74%'],
-        center: ['50%', '51%'],
-        startAngle: 98,
+        radius: ['55%', '74%'],
+        center: ['50%', '52%'],
+        startAngle: 96,
         label: {
           show: false
         },
@@ -1060,6 +1160,11 @@ function buildRepositoryLanguageDonutOption(
   };
 }
 
+/**
+ * 函数说明：根据活跃月份或依赖文件构建版本快照列表。
+ * 参数说明：`monthActivity` 为月度活动数据，`files` 为技术栈识别到的文件路径。
+ * 返回说明：返回版本卡片列表数据。
+ */
 function buildVersionSnapshots(
   monthActivity: RepoActivityPoint[],
   files: Array<{ filePath: string }>
@@ -1075,17 +1180,12 @@ function buildVersionSnapshots(
     }));
   }
 
-  return files.slice(0, 4).map((item, index) => {
-    const segments = item.filePath.split('/');
-    const fileName = segments[segments.length - 1] ?? item.filePath;
-
-    return {
-      title: fileName,
-      summary: item.filePath,
-      date: '结构快照',
-      badge: index === 0 ? 'File' : undefined
-    };
-  });
+  return files.slice(0, 4).map((item, index) => ({
+    title: extractFileName(item.filePath),
+    summary: item.filePath,
+    date: '结构快照',
+    badge: index === 0 ? 'File' : undefined
+  }));
 }
 
 function sumActivityCount(data: RepoActivityPoint[]): number {
@@ -1177,6 +1277,25 @@ function formatRelativeTime(value: string): string {
   }
 
   return formatDateLabel(value);
+}
+
+function buildRepoInitials(name: string): string {
+  const segments = name
+    .split(/[-_\s]/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .slice(0, 2);
+
+  if (segments.length === 0) {
+    return 'CV';
+  }
+
+  return segments.map((item) => item.slice(0, 1).toUpperCase()).join('');
+}
+
+function extractFileName(filePath: string): string {
+  const segments = filePath.split('/');
+  return segments[segments.length - 1] ?? filePath;
 }
 
 export default RepositoryDetailPage;
