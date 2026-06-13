@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EChartsOption } from 'echarts';
 import ReactECharts from 'echarts-for-react';
 import { Link, useParams } from 'react-router-dom';
@@ -53,6 +53,7 @@ interface TrafficMetricItem {
 }
 
 interface VersionRecordItem {
+  id: string;
   title: string;
   summary: string;
   date: string;
@@ -102,6 +103,7 @@ const STACK_TABS: string[] = ['语言分布', '技术栈标签', '依赖文件']
 function RepositoryDetailPage(): JSX.Element {
   const params = useParams<{ repoId: string }>();
   const repoId = Number(params.repoId);
+  const heatmapMainRef = useRef<HTMLDivElement | null>(null);
   const [detail, setDetail] = useState<RepoDetail | null>(null);
   const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
   const [stack, setStack] = useState<RepoStackDetail | null>(null);
@@ -177,6 +179,27 @@ function RepositoryDetailPage(): JSX.Element {
       active = false;
     };
   }, [repoId]);
+
+  useEffect(() => {
+    if (!heatmapMainRef.current || heatmap.length === 0) {
+      return;
+    }
+
+    const target = heatmapMainRef.current;
+    const activeCells = target.querySelectorAll<HTMLElement>('.repo-detail-heatmap__cell:not(.repo-detail-heatmap__cell--0)');
+    const lastActiveCell = activeCells.item(activeCells.length - 1);
+
+    if (lastActiveCell) {
+      lastActiveCell.scrollIntoView({
+        block: 'nearest',
+        inline: 'end'
+      });
+      target.scrollLeft = Math.max(0, target.scrollLeft - 56);
+      return;
+    }
+
+    target.scrollLeft = Math.max(0, target.scrollWidth - target.clientWidth);
+  }, [heatmap]);
 
   const activeSeries = useMemo(() => {
     if (granularity === 'week') {
@@ -524,32 +547,34 @@ function RepositoryDetailPage(): JSX.Element {
             <div className="repo-detail-heatmap">
               <div className="repo-detail-heatmap__body">
                 <div className="repo-detail-heatmap__weekdays">
-                  {['周一', '周二', '周三', '周四', '周五', '周六', '周日'].map((item) => (
-                    <span key={item}>{item}</span>
+                  {['周一', '', '周三', '', '周五', '', '周日'].map((item, index) => (
+                    <span key={`${item || 'empty'}-${index}`}>{item}</span>
                   ))}
                 </div>
 
-                <div className="repo-detail-heatmap__main">
-                  <div className="repo-detail-heatmap__grid">
-                    {heatmapMatrix.cells.map((cell) => (
-                      <span
-                        key={cell.key}
-                        className={getHeatmapCellClass(cell.count, heatmapMatrix.maxValue)}
-                        title={`${cell.date} · ${cell.count} 次提交`}
-                        style={{
-                          gridColumn: cell.column + 1,
-                          gridRow: cell.row + 1
-                        }}
-                      />
-                    ))}
-                  </div>
+                <div ref={heatmapMainRef} className="repo-detail-heatmap__main">
+                  <div className="repo-detail-heatmap__content">
+                    <div className="repo-detail-heatmap__grid">
+                      {heatmapMatrix.cells.map((cell) => (
+                        <span
+                          key={cell.key}
+                          className={getHeatmapCellClass(cell.count, heatmapMatrix.maxValue)}
+                          title={`${cell.date} · ${cell.count} 次提交`}
+                          style={{
+                            gridColumn: cell.column + 1,
+                            gridRow: cell.row + 1
+                          }}
+                        />
+                      ))}
+                    </div>
 
-                  <div className="repo-detail-heatmap__months">
-                    {heatmapMonthLabels.map((item) => (
-                      <span key={item}>
-                        {item}
-                      </span>
-                    ))}
+                    <div className="repo-detail-heatmap__months">
+                      {heatmapMonthLabels.map((item) => (
+                        <span key={item}>
+                          {item}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -661,7 +686,7 @@ function RepositoryDetailPage(): JSX.Element {
           <div className="repo-detail-list">
             {versionSnapshots.length > 0 ? (
               versionSnapshots.map((item) => (
-                <div key={`${item.title}-${item.date}`} className="repo-detail-list__item">
+                <div key={item.id} className="repo-detail-list__item">
                   <div className="repo-detail-list__main">
                     <div className="repo-detail-list__title-row">
                       <strong>{item.title}</strong>
@@ -693,9 +718,11 @@ function RepositoryDetailPage(): JSX.Element {
                   <div className="repo-detail-commit-list__avatar">{getCommitInitial(item)}</div>
                   <div className="repo-detail-commit-list__copy">
                     <strong>{trimText(item.message || item.sha, 30)}</strong>
-                    <span>{item.authorLogin || item.authorName || 'unknown'}</span>
+                    <div className="repo-detail-commit-list__meta">
+                      <span>{item.authorLogin || item.authorName || 'unknown'}</span>
+                      <em>{formatRelativeTime(item.commitTime)}</em>
+                    </div>
                   </div>
-                  <em>{formatRelativeTime(item.commitTime)}</em>
                 </div>
               ))
             ) : (
@@ -1211,10 +1238,26 @@ function buildVersionSnapshots(
   monthActivity: RepoActivityPoint[],
   files: Array<{ filePath: string }>
 ): VersionRecordItem[] {
-  const activeMonths = monthActivity.filter((item) => item.count > 0).slice(-4).reverse();
+  const monthSummaryMap = new Map<string, number>();
+
+  monthActivity.forEach((item) => {
+    if (item.count <= 0) {
+      return;
+    }
+
+    const currentCount = monthSummaryMap.get(item.label) ?? 0;
+    monthSummaryMap.set(item.label, currentCount + item.count);
+  });
+
+  const activeMonths = Array.from(monthSummaryMap.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((left, right) => left.label.localeCompare(right.label))
+    .slice(-4)
+    .reverse();
 
   if (activeMonths.length > 0) {
     return activeMonths.map((item, index) => ({
+      id: `month:${item.label}`,
       title: `${item.label} 月度快照`,
       summary: `当月提交 ${formatNumber(item.count)} 次`,
       date: item.label,
@@ -1223,6 +1266,7 @@ function buildVersionSnapshots(
   }
 
   return files.slice(0, 4).map((item, index) => ({
+    id: `file:${item.filePath}`,
     title: extractFileName(item.filePath),
     summary: item.filePath,
     date: '结构快照',

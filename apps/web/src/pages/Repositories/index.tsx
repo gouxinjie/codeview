@@ -220,9 +220,38 @@ function RepositoriesPage(): JSX.Element {
   return (
     <div className="repositories-page">
       <section className="repositories-page__hero">
-        <div className="repositories-page__title-wrap">
-          <h1 className="repositories-page__title">项目列表</h1>
-          <p className="repositories-page__count">共 {formatNumber(sortedRepositories.length)} 个项目</p>
+        <div className="repositories-page__hero-head">
+          <div className="repositories-page__title-wrap">
+            <h1 className="repositories-page__title">项目列表</h1>
+            <p className="repositories-page__count">共 {formatNumber(sortedRepositories.length)} 个项目</p>
+          </div>
+
+          <div className="repositories-page__toolbar-bottom">
+            <div className="repositories-page__view-switch" aria-label="视图切换">
+              <button
+                type="button"
+                className={
+                  viewMode === 'grid'
+                    ? 'repositories-page__view-button repositories-page__view-button--active'
+                    : 'repositories-page__view-button'
+                }
+                onClick={() => setViewMode('grid')}
+              >
+                <LayoutGrid aria-hidden="true" strokeWidth={1.7} />
+              </button>
+              <button
+                type="button"
+                className={
+                  viewMode === 'list'
+                    ? 'repositories-page__view-button repositories-page__view-button--active'
+                    : 'repositories-page__view-button'
+                }
+                onClick={() => setViewMode('list')}
+              >
+                <List aria-hidden="true" strokeWidth={1.7} />
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="repositories-page__toolbar">
@@ -259,33 +288,6 @@ function RepositoriesPage(): JSX.Element {
             <RotateCcw aria-hidden="true" strokeWidth={1.7} />
             <span>重置筛选</span>
           </button>
-        </div>
-
-        <div className="repositories-page__toolbar-bottom">
-          <div className="repositories-page__view-switch" aria-label="视图切换">
-            <button
-              type="button"
-              className={
-                viewMode === 'grid'
-                  ? 'repositories-page__view-button repositories-page__view-button--active'
-                  : 'repositories-page__view-button'
-              }
-              onClick={() => setViewMode('grid')}
-            >
-              <LayoutGrid aria-hidden="true" strokeWidth={1.7} />
-            </button>
-            <button
-              type="button"
-              className={
-                viewMode === 'list'
-                  ? 'repositories-page__view-button repositories-page__view-button--active'
-                  : 'repositories-page__view-button'
-              }
-              onClick={() => setViewMode('list')}
-            >
-              <List aria-hidden="true" strokeWidth={1.7} />
-            </button>
-          </div>
         </div>
       </section>
 
