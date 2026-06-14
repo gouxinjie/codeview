@@ -34,7 +34,7 @@ export interface ConfigPayload {
   emailAliases: string[];
   includePrivateRepos: boolean;
   syncIntervalMinutes: number;
-  defaultTimeRange: '30d' | '90d' | '180d';
+  defaultTimeRange: '30d' | '90d' | '180d' | '365d';
   timezone: string;
 }
 
@@ -298,6 +298,12 @@ export interface StatisticsData {
     days: number;
     startDate: string;
     endDate: string;
+    historyCoverage: {
+      availableStartDate: string | null;
+      availableDays: number;
+      isCurrentRangeComplete: boolean;
+      isPreviousRangeComplete: boolean;
+    };
   };
   summaryCards: StatisticsSummaryCard[];
   trendDaily: Array<{ date: string; count: number }>;

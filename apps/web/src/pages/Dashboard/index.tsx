@@ -121,7 +121,7 @@ function DashboardPage(): JSX.Element {
       emailAliasesText: config.emailAliases.join(', '),
       includePrivateRepos: config.includePrivateRepos,
       syncIntervalMinutes: config.syncIntervalMinutes,
-      defaultTimeRange: config.defaultTimeRange as '30d' | '90d' | '180d',
+      defaultTimeRange: config.defaultTimeRange as '30d' | '90d' | '180d' | '365d',
       timezone: config.timezone
     });
   }, [config]);
@@ -739,13 +739,14 @@ function DashboardPage(): JSX.Element {
                   onChange={(event) =>
                     setFormState((current) => ({
                       ...current,
-                      defaultTimeRange: event.target.value as '30d' | '90d' | '180d'
+                      defaultTimeRange: event.target.value as '30d' | '90d' | '180d' | '365d'
                     }))
                   }
                 >
                   <option value="30d">30 天</option>
                   <option value="90d">90 天</option>
                   <option value="180d">180 天</option>
+                  <option value="365d">365 天</option>
                 </select>
               </label>
               <label className="form-field form-grid__full">

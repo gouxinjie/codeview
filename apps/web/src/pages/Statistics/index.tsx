@@ -32,7 +32,7 @@ import { formatDate, formatDateTime, formatNumber, translateSyncStatus } from '@
 import './index.scss';
 
 type TrendGranularity = 'day' | 'week' | 'month';
-type StatisticsRangeMode = 7 | 30 | 90 | 'custom';
+type StatisticsRangeMode = 7 | 30 | 90 | 180 | 365 | 'custom';
 type HeaderIconName = 'user' | 'clock' | 'sync' | 'success' | 'github' | 'settings';
 
 interface TopInfoCellProps {
@@ -97,18 +97,36 @@ const SUMMARY_ICON_LIST: LucideIcon[] = [
  * 默认值：无。
  */
 function StatisticsPage(): ReactElement {
-  const { config } = useAppStore();
+  const { config, configLoaded } = useAppStore();
   const [statistics, setStatistics] = useState<StatisticsData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [trendGranularity, setTrendGranularity] = useState<TrendGranularity>('day');
-  const [rangeMode, setRangeMode] = useState<StatisticsRangeMode>(30);
+  const [rangeMode, setRangeMode] = useState<StatisticsRangeMode | null>(null);
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [pendingCustomStartDate, setPendingCustomStartDate] = useState<string>('');
   const [pendingCustomEndDate, setPendingCustomEndDate] = useState<string>('');
 
   useEffect(() => {
+    if (!configLoaded) {
+      return;
+    }
+
+    if (!config) {
+      setRangeMode((current) => current ?? 30);
+      return;
+    }
+
+    const defaultRangeMode = parseDefaultStatisticsRange(config.defaultTimeRange);
+    setRangeMode((current) => current ?? defaultRangeMode);
+  }, [config, configLoaded]);
+
+  useEffect(() => {
+    if (rangeMode === null) {
+      return;
+    }
+
     let active = true;
 
     const loadStatistics = async (): Promise<void> => {
@@ -185,11 +203,15 @@ function StatisticsPage(): ReactElement {
       return '最近 30 天';
     }
 
+    const coverageText = statistics.appliedRange.historyCoverage.isCurrentRangeComplete
+      ? ''
+      : `（历史覆盖 ${statistics.appliedRange.historyCoverage.availableDays} 天）`;
+
     if (statistics.appliedRange.mode === 'custom') {
-      return `${statistics.appliedRange.startDate} 至 ${statistics.appliedRange.endDate}`;
+      return `${statistics.appliedRange.startDate} 至 ${statistics.appliedRange.endDate}${coverageText}`;
     }
 
-    return `最近 ${statistics.appliedRange.days} 天`;
+    return `最近 ${statistics.appliedRange.days} 天${coverageText}`;
   }, [statistics]);
 
   const customRangeInvalid =
@@ -263,7 +285,7 @@ function StatisticsPage(): ReactElement {
         </div>
 
         <div className="statistics-page__filters">
-          {([7, 30, 90] as const).map((item) => (
+          {([7, 30, 90, 180, 365] as const).map((item) => (
             <button
               key={item}
               type="button"
@@ -274,7 +296,7 @@ function StatisticsPage(): ReactElement {
               }
               onClick={() => setRangeMode(item)}
             >
-              {item} 天
+              {item === 365 ? '365 天' : `${item} 天`}
             </button>
           ))}
           <button
@@ -290,6 +312,16 @@ function StatisticsPage(): ReactElement {
           </button>
         </div>
       </section>
+
+      {!statistics.appliedRange.historyCoverage.isCurrentRangeComplete && (
+        <section className="statistics-page__coverage-note">
+          <strong>当前时间窗历史数据未覆盖完整。</strong>
+          <span>
+            当前最早提交历史从 {statistics.appliedRange.historyCoverage.availableStartDate ?? '--'} 开始；
+            如需完整查看 180 天或 365 天趋势，建议先执行一次全量同步。
+          </span>
+        </section>
+      )}
 
       {rangeMode === 'custom' && (
         <section className="statistics-page__custom-range">
@@ -423,7 +455,7 @@ function StatisticsPage(): ReactElement {
         </article>
 
         <article className="statistics-panel statistics-panel--change">
-          <PanelHeading title="提交结构变化（近 30 天）" />
+          <PanelHeading title={`提交结构变化（${currentRangeText}）`} />
           <div className="statistics-panel__change-summary">
             <strong className="statistics-panel__change-positive">
               + {formatNumber(sumPositiveChange(statistics.changeTrend))}
@@ -1171,6 +1203,22 @@ function formatDayKey(value: Date): string {
   const day = String(value.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
+}
+
+function parseDefaultStatisticsRange(defaultTimeRange: string): StatisticsRangeMode {
+  if (defaultTimeRange === '90d') {
+    return 90;
+  }
+
+  if (defaultTimeRange === '180d') {
+    return 180;
+  }
+
+  if (defaultTimeRange === '365d') {
+    return 365;
+  }
+
+  return 30;
 }
 
 export default StatisticsPage;

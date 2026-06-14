@@ -176,7 +176,7 @@ export function fetchStackAnalysis(filters?: {
 }
 
 export function fetchStatistics(filters?: {
-  rangeDays?: 7 | 30 | 90;
+  rangeDays?: 7 | 30 | 90 | 180 | 365;
   startDate?: string;
   endDate?: string;
 }): Promise<StatisticsData> {

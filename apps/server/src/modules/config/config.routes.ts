@@ -10,7 +10,7 @@ const configBodySchema = z.object({
   emailAliases: z.array(z.string().email()).default([]),
   includePrivateRepos: z.boolean().default(false),
   syncIntervalMinutes: z.number().int().min(15).max(1440).default(720),
-  defaultTimeRange: z.enum(['30d', '90d', '180d']).default('30d'),
+  defaultTimeRange: z.enum(['30d', '90d', '180d', '365d']).default('30d'),
   timezone: z.string().min(1)
 });
 

@@ -166,7 +166,7 @@ function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
 }
 
 function AppFrame(): ReactElement {
-  const { userId, setConfig } = useAppStore();
+  const { userId, setConfig, setConfigLoaded } = useAppStore();
   const [bootstrapError, setBootstrapError] = useState<string>('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
@@ -179,10 +179,12 @@ function AppFrame(): ReactElement {
 
         if (active) {
           setConfig(result);
+          setConfigLoaded(true);
           setBootstrapError('');
         }
       } catch (error) {
         if (active) {
+          setConfigLoaded(true);
           setBootstrapError(error instanceof Error ? error.message : '初始化配置失败');
         }
       }
@@ -193,7 +195,7 @@ function AppFrame(): ReactElement {
     return () => {
       active = false;
     };
-  }, [setConfig, userId]);
+  }, [setConfig, setConfigLoaded, userId]);
 
   return (
     <div className={sidebarCollapsed ? 'app-shell app-shell--collapsed' : 'app-shell'}>

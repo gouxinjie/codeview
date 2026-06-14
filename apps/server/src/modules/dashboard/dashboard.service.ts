@@ -22,6 +22,13 @@ interface StatisticsRange {
   previousEndExclusiveIso: string;
 }
 
+interface StatisticsHistoryCoverage {
+  availableStartDate: string | null;
+  availableDays: number;
+  isCurrentRangeComplete: boolean;
+  isPreviousRangeComplete: boolean;
+}
+
 /* 汇总首页总览数据，减少前端并发请求数量。 */
 export function getOverview(userId: string): {
   header: {
@@ -304,7 +311,7 @@ export function getPersonalHeatmap(userId: string): Array<{
 export function getStatistics(
   userId: string,
   filters?: {
-    rangeDays?: 7 | 30 | 90;
+    rangeDays?: 7 | 30 | 90 | 180 | 365;
     startDate?: string;
     endDate?: string;
   }
@@ -321,6 +328,12 @@ export function getStatistics(
     days: number;
     startDate: string;
     endDate: string;
+    historyCoverage: {
+      availableStartDate: string | null;
+      availableDays: number;
+      isCurrentRangeComplete: boolean;
+      isPreviousRangeComplete: boolean;
+    };
   };
   summaryCards: Array<{
     id: string;
@@ -370,6 +383,7 @@ export function getStatistics(
   const totalReposRow = db
     .prepare('SELECT COUNT(*) AS count FROM repos WHERE user_id = ?')
     .get(userId) as { count: number };
+  const historyCoverage = resolveStatisticsHistoryCoverage(userId, range);
   const codeVolumeRow = db
     .prepare(
       `
@@ -572,43 +586,43 @@ export function getStatistics(
       id: 'total-commits',
       label: '提交总数',
       value: totalCommits,
-      hint: `${range.days} 天范围`,
-      ...buildChangeMeta(totalCommits, previousSummaryRow.totalCommits)
+      hint: buildStatisticsRangeHint(range.days, historyCoverage, '范围'),
+      ...buildChangeMeta(totalCommits, previousSummaryRow.totalCommits, historyCoverage.isPreviousRangeComplete)
     },
     {
       id: 'total-repos',
       label: '总仓库数',
       value: totalReposRow.count,
       hint: '纳入同步范围',
-      ...buildChangeMeta(totalReposRow.count, Math.max(0, totalReposRow.count - previousActiveReposRow.count))
+      ...buildChangeMeta(totalReposRow.count, Math.max(0, totalReposRow.count - previousActiveReposRow.count), true)
     },
     {
       id: 'active-repos',
       label: '活跃项目数',
       value: activeReposRow.count,
-      hint: `${range.days} 天内有提交`,
-      ...buildChangeMeta(activeReposRow.count, previousActiveReposRow.count)
+      hint: buildStatisticsRangeHint(range.days, historyCoverage, '内有提交'),
+      ...buildChangeMeta(activeReposRow.count, previousActiveReposRow.count, historyCoverage.isPreviousRangeComplete)
     },
     {
       id: 'active-days',
       label: '活跃天数',
       value: currentSummaryRow.activeDays,
-      hint: `${range.days} 天范围`,
-      ...buildChangeMeta(currentSummaryRow.activeDays, previousSummaryRow.activeDays)
+      hint: buildStatisticsRangeHint(range.days, historyCoverage, '范围'),
+      ...buildChangeMeta(currentSummaryRow.activeDays, previousSummaryRow.activeDays, historyCoverage.isPreviousRangeComplete)
     },
     {
       id: 'code-volume',
       label: '代码体量',
       value: codeVolumeRow.totalBytes,
       hint: '语言字节总量',
-      ...buildChangeMeta(codeVolumeRow.totalBytes, codeVolumeRow.totalBytes)
+      ...buildChangeMeta(codeVolumeRow.totalBytes, codeVolumeRow.totalBytes, true)
     },
     {
       id: 'merge-commits',
       label: '合并提交数',
       value: currentSummaryRow.mergeCommits,
-      hint: `${range.days} 天范围`,
-      ...buildChangeMeta(currentSummaryRow.mergeCommits, previousSummaryRow.mergeCommits)
+      hint: buildStatisticsRangeHint(range.days, historyCoverage, '范围'),
+      ...buildChangeMeta(currentSummaryRow.mergeCommits, previousSummaryRow.mergeCommits, historyCoverage.isPreviousRangeComplete)
     }
   ];
 
@@ -645,7 +659,8 @@ export function getStatistics(
       mode: range.mode,
       days: range.days,
       startDate: range.startDate,
-      endDate: range.endDate
+      endDate: range.endDate,
+      historyCoverage
     },
     summaryCards,
     trendDaily: totalTrendRows,
@@ -662,7 +677,7 @@ export function getStatistics(
 
 function resolveStatisticsRange(
   filters: {
-    rangeDays?: 7 | 30 | 90;
+    rangeDays?: 7 | 30 | 90 | 180 | 365;
     startDate?: string;
     endDate?: string;
   } | undefined,
@@ -714,17 +729,79 @@ function resolveStatisticsRange(
   };
 }
 
+function resolveStatisticsHistoryCoverage(
+  userId: string,
+  range: StatisticsRange
+): StatisticsHistoryCoverage {
+  const historyRow = db
+    .prepare(
+      `
+        SELECT MIN(substr(commit_time, 1, 10)) AS availableStartDate
+        FROM commits
+        WHERE user_id = ?
+      `
+    )
+    .get(userId) as { availableStartDate: string | null };
+
+  if (!historyRow.availableStartDate) {
+    return {
+      availableStartDate: null,
+      availableDays: 0,
+      isCurrentRangeComplete: false,
+      isPreviousRangeComplete: false
+    };
+  }
+
+  const availableStartDate =
+    historyRow.availableStartDate > range.startDate ? historyRow.availableStartDate : range.startDate;
+  const availableDays =
+    availableStartDate > range.endDate
+      ? 0
+      : differenceInCalendarDays(new Date(range.endDate), new Date(availableStartDate)) + 1;
+
+  return {
+    availableStartDate: historyRow.availableStartDate,
+    availableDays,
+    isCurrentRangeComplete: historyRow.availableStartDate <= range.startDate,
+    isPreviousRangeComplete: historyRow.availableStartDate <= range.previousStartDate
+  };
+}
+
 function buildRangeBoundaryIso(dayKey: string, timezone: string): string {
   return fromZonedTime(`${dayKey}T00:00:00`, timezone).toISOString();
 }
 
+function buildStatisticsRangeHint(
+  days: number,
+  historyCoverage: StatisticsHistoryCoverage,
+  suffix: '范围' | '内有提交'
+): string {
+  if (historyCoverage.availableStartDate === null) {
+    return '暂无提交历史';
+  }
+
+  if (historyCoverage.isCurrentRangeComplete) {
+    return `${days} 天${suffix}`;
+  }
+
+  return `${days} 天${suffix}（历史覆盖 ${historyCoverage.availableDays} 天）`;
+}
+
 function buildChangeMeta(
   current: number,
-  previous: number
+  previous: number,
+  canCompare: boolean
 ): {
   changeText: string;
   changeDirection: 'up' | 'down' | 'flat';
 } {
+  if (!canCompare) {
+    return {
+      changeText: '历史数据不足',
+      changeDirection: 'flat'
+    };
+  }
+
   if (current === previous) {
     return {
       changeText: '较上期 持平',

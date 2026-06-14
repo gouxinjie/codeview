@@ -6,7 +6,7 @@ import { getActiveRankings, getInsights, getOverview, getPersonalHeatmap, getSta
 export const dashboardRouter = Router();
 
 const statisticsQuerySchema = z.object({
-  rangeDays: z.enum(['7', '30', '90']).optional(),
+  rangeDays: z.enum(['7', '30', '90', '180', '365']).optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
 });
@@ -67,7 +67,7 @@ dashboardRouter.get(
     sendSuccess(
       response,
       getStatistics(userId, {
-        rangeDays: query.rangeDays ? Number(query.rangeDays) as 7 | 30 | 90 : undefined,
+        rangeDays: query.rangeDays ? Number(query.rangeDays) as 7 | 30 | 90 | 180 | 365 : undefined,
         startDate: query.startDate,
         endDate: query.endDate
       })
