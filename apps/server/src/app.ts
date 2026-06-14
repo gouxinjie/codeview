@@ -10,12 +10,47 @@ import { syncRouter } from '@/modules/sync/sync.routes';
 import { sendFailure } from '@/utils/http';
 import { logger } from '@/utils/logger';
 
+/* 根据当前前端地址生成允许的本地联调来源，兼容 localhost 与 127.0.0.1。 */
+function buildAllowedOrigins(webOrigin: string): Set<string> {
+  const allowedOrigins = new Set<string>([webOrigin]);
+
+  try {
+    const currentUrl = new URL(webOrigin);
+    const alternateHostname = currentUrl.hostname === 'localhost'
+      ? '127.0.0.1'
+      : currentUrl.hostname === '127.0.0.1'
+        ? 'localhost'
+        : '';
+
+    if (alternateHostname) {
+      allowedOrigins.add(`${currentUrl.protocol}//${alternateHostname}${currentUrl.port ? `:${currentUrl.port}` : ''}`);
+    }
+  } catch (error) {
+    logger.error('解析 WEB_ORIGIN 失败', {
+      message: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+
+  return allowedOrigins;
+}
+
 export function createApp(): express.Express {
   const app = express();
+  const allowedOrigins = buildAllowedOrigins(env.webOrigin);
 
   app.use(
     cors({
-      origin: env.webOrigin,
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.has(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        logger.info('拒绝未授权来源访问服务端', {
+          origin
+        });
+        callback(null, false);
+      },
       credentials: true
     })
   );

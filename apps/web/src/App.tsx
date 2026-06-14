@@ -10,6 +10,7 @@ const DashboardPage = lazy(() => import('./pages/Dashboard'));
 const RepositoriesPage = lazy(() => import('./pages/Repositories'));
 const RepositoryDetailPage = lazy(() => import('./pages/RepositoryDetail'));
 const StackAnalysisPage = lazy(() => import('./pages/StackAnalysis'));
+const InsightCenterPage = lazy(() => import('./pages/InsightCenter'));
 const StatisticsPage = lazy(() => import('./pages/Statistics'));
 
 type SidebarIconName = 'dashboard' | 'repo' | 'detail' | 'stack' | 'insight' | 'stats' | 'config';
@@ -75,7 +76,7 @@ function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
       match: (pathname) => /^\/repos\/\d+$/.test(pathname)
     },
     { label: '技术栈分析', subtitle: '标签与语言', to: '/stack-analysis', icon: 'stack', end: true },
-    { label: '洞察中心', subtitle: '自动结论', icon: 'insight' },
+    { label: '洞察中心', subtitle: '自动结论', to: '/insights', icon: 'insight', end: true },
     { label: '数据统计', subtitle: '经营指标', to: '/statistics', icon: 'stats', end: true },
     { label: '配置中心', subtitle: '数据源配置', icon: 'config' }
   ];
@@ -211,6 +212,7 @@ function AppFrame(): ReactElement {
               <Route path="/repos" element={<RepositoriesPage />} />
               <Route path="/repos/:repoId" element={<RepositoryDetailPage />} />
               <Route path="/stack-analysis" element={<StackAnalysisPage />} />
+              <Route path="/insights" element={<InsightCenterPage />} />
               <Route path="/statistics" element={<StatisticsPage />} />
             </Routes>
           </Suspense>

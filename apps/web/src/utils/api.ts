@@ -17,7 +17,12 @@ import type {
   SyncStatus
 } from '@/types/api';
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3101/api';
+const defaultApiBaseUrl =
+  typeof window === 'undefined'
+    ? 'http://localhost:3101/api'
+    : `${window.location.protocol}//${window.location.hostname}:3101/api`;
+
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? defaultApiBaseUrl;
 
 type QueryValue = string | number | boolean | undefined;
 
