@@ -42,6 +42,19 @@ export interface ConfigView {
 
 export type ConfigInput = z.infer<typeof configInputSchema>;
 
+/* 尝试解密数据库中保存的 Token，密钥变更后旧密文会在这里失效。 */
+function tryDecryptStoredToken(encryptedToken: string | null): string | null {
+  if (!encryptedToken) {
+    return null;
+  }
+
+  try {
+    return decryptValue(encryptedToken, env.encryptionSecret);
+  } catch {
+    return null;
+  }
+}
+
 /* 确保单用户配置行存在，便于前端首次访问时直接拿到 CSRF 令牌。 */
 export function ensureConfig(userId: string): void {
   const now = new Date().toISOString();
@@ -114,7 +127,7 @@ export function getConfig(userId: string): ConfigView {
   return {
     userId,
     githubUsername: row.github_username,
-    hasToken: Boolean(row.github_token_encrypted),
+    hasToken: tryDecryptStoredToken(row.github_token_encrypted) !== null,
     emailAliases: parseAliases(row.email_aliases_json),
     includePrivateRepos: row.include_private_repos === 1,
     syncIntervalMinutes: row.sync_interval_minutes,
@@ -137,6 +150,8 @@ export function saveConfig(payload: ConfigInput): ConfigView {
     config.githubToken && config.githubToken.length > 0
       ? encryptValue(config.githubToken, env.encryptionSecret)
       : null;
+  const shouldReplaceToken = encryptedToken !== null;
+  const shouldClearStoredInvalidToken = !shouldReplaceToken && !existing.hasToken;
 
   db.prepare(
     `
@@ -154,7 +169,11 @@ export function saveConfig(payload: ConfigInput): ConfigView {
     `
       UPDATE sync_configs
       SET
-        github_token_encrypted = COALESCE(@githubTokenEncrypted, github_token_encrypted),
+        github_token_encrypted = CASE
+          WHEN @shouldReplaceToken = 1 THEN @githubTokenEncrypted
+          WHEN @shouldClearStoredInvalidToken = 1 THEN NULL
+          ELSE github_token_encrypted
+        END,
         email_aliases_json = @emailAliases,
         include_private_repos = @includePrivateRepos,
         sync_interval_minutes = @syncIntervalMinutes,
@@ -165,6 +184,8 @@ export function saveConfig(payload: ConfigInput): ConfigView {
   ).run({
     userId: config.userId,
     githubTokenEncrypted: encryptedToken,
+    shouldReplaceToken: shouldReplaceToken ? 1 : 0,
+    shouldClearStoredInvalidToken: shouldClearStoredInvalidToken ? 1 : 0,
     emailAliases: JSON.stringify(normalizedEmailAliases),
     includePrivateRepos: config.includePrivateRepos ? 1 : 0,
     syncIntervalMinutes: config.syncIntervalMinutes,
@@ -248,7 +269,13 @@ export function getDecryptedToken(userId: string): string | null {
     return null;
   }
 
-  return decryptValue(row.github_token_encrypted, env.encryptionSecret);
+  const decryptedToken = tryDecryptStoredToken(row.github_token_encrypted);
+
+  if (!decryptedToken) {
+    throw new Error('当前 GitHub Token 无法解密，请在配置中心重新填写并保存 Token');
+  }
+
+  return decryptedToken;
 }
 
 /* 同步完成后更新最后同步时间，供头部状态显示。 */
