@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { env } from '@/config/env';
 import { db } from '@/database/client';
-import { createCsrfToken, decryptValue, encryptValue, escapeHtml } from '@/utils/security';
-import { DEFAULT_TIMEZONE } from '@/utils/time';
+import { createCsrfToken, decryptValue, encryptValue, escapeHtml, unescapeHtml } from '@/utils/security';
+import { DEFAULT_TIMEZONE, resolveTimezone } from '@/utils/time';
 
 const configInputSchema = z.object({
   userId: z.string().min(1),
@@ -12,7 +12,7 @@ const configInputSchema = z.object({
   includePrivateRepos: z.boolean().default(false),
   syncIntervalMinutes: z.number().int().min(15).max(1440).default(720),
   defaultTimeRange: z.enum(['30d', '90d', '180d', '365d']).default('30d'),
-  timezone: z.string().min(1).default(DEFAULT_TIMEZONE)
+  timezone: z.string().min(1).default(DEFAULT_TIMEZONE).transform((value) => resolveTimezone(value))
 });
 
 interface ConfigRow {
@@ -76,7 +76,11 @@ export function ensureConfig(userId: string): void {
 function parseAliases(payload: string): string[] {
   const parsed = JSON.parse(payload) as unknown;
 
-  return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(parsed)
+    ? parsed
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => unescapeHtml(item))
+    : [];
 }
 
 /* 读取脱敏后的配置，供前端页面展示。 */
@@ -115,7 +119,7 @@ export function getConfig(userId: string): ConfigView {
     includePrivateRepos: row.include_private_repos === 1,
     syncIntervalMinutes: row.sync_interval_minutes,
     defaultTimeRange: row.default_time_range,
-    timezone: row.timezone,
+    timezone: resolveTimezone(row.timezone),
     csrfToken: row.csrf_token,
     lastSyncedAt: row.last_synced_at
   };
@@ -126,6 +130,8 @@ export function saveConfig(payload: ConfigInput): ConfigView {
   const config = configInputSchema.parse(payload);
   const existing = getConfig(config.userId);
   const now = new Date().toISOString();
+  const normalizedEmailAliases = [...new Set(config.emailAliases.map((item) => escapeHtml(item.trim().toLowerCase())))];
+  const resolvedTimezone = resolveTimezone(config.timezone);
 
   const encryptedToken =
     config.githubToken && config.githubToken.length > 0
@@ -159,11 +165,11 @@ export function saveConfig(payload: ConfigInput): ConfigView {
   ).run({
     userId: config.userId,
     githubTokenEncrypted: encryptedToken,
-    emailAliases: JSON.stringify(config.emailAliases.map((item) => escapeHtml(item.trim().toLowerCase()))),
+    emailAliases: JSON.stringify(normalizedEmailAliases),
     includePrivateRepos: config.includePrivateRepos ? 1 : 0,
     syncIntervalMinutes: config.syncIntervalMinutes,
     defaultTimeRange: config.defaultTimeRange,
-    timezone: config.timezone
+    timezone: resolvedTimezone
   });
 
   db.prepare('DELETE FROM author_identities WHERE user_id = ?').run(config.userId);
@@ -203,12 +209,12 @@ export function saveConfig(payload: ConfigInput): ConfigView {
     `
   );
 
-  for (const alias of config.emailAliases) {
+  for (const alias of normalizedEmailAliases) {
     insertIdentityStatement.run(
       config.userId,
       `user:${config.userId}`,
       '',
-      escapeHtml(alias.trim().toLowerCase()),
+      alias,
       escapeHtml(config.githubUsername.trim()),
       0
     );

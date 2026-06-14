@@ -12,6 +12,7 @@ const RepositoryDetailPage = lazy(() => import('./pages/RepositoryDetail'));
 const StackAnalysisPage = lazy(() => import('./pages/StackAnalysis'));
 const InsightCenterPage = lazy(() => import('./pages/InsightCenter'));
 const StatisticsPage = lazy(() => import('./pages/Statistics'));
+const ConfigCenterPage = lazy(() => import('./pages/ConfigCenter'));
 
 type SidebarIconName = 'dashboard' | 'repo' | 'detail' | 'stack' | 'insight' | 'stats' | 'config';
 
@@ -78,7 +79,7 @@ function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
     { label: '技术栈分析', subtitle: '标签与语言', to: '/stack-analysis', icon: 'stack', end: true },
     { label: '洞察中心', subtitle: '自动结论', to: '/insights', icon: 'insight', end: true },
     { label: '数据统计', subtitle: '经营指标', to: '/statistics', icon: 'stats', end: true },
-    { label: '配置中心', subtitle: '数据源配置', icon: 'config' }
+    { label: '配置中心', subtitle: '数据源配置', to: '/config-center', icon: 'config', end: true }
   ];
 
   return (
@@ -216,6 +217,7 @@ function AppFrame(): ReactElement {
               <Route path="/stack-analysis" element={<StackAnalysisPage />} />
               <Route path="/insights" element={<InsightCenterPage />} />
               <Route path="/statistics" element={<StatisticsPage />} />
+              <Route path="/config-center" element={<ConfigCenterPage />} />
             </Routes>
           </Suspense>
         </main>

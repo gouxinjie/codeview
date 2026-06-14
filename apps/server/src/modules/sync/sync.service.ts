@@ -3,7 +3,7 @@ import { db } from '@/database/client';
 import { getConfig, getDecryptedToken, updateLastSyncedAt } from '@/modules/config/config.service';
 import { logger } from '@/utils/logger';
 import { escapeHtml, unescapeHtml } from '@/utils/security';
-import { DEFAULT_TIMEZONE, getDayKey, getDaysFromNow, getMonthKey, getWeekKey } from '@/utils/time';
+import { DEFAULT_TIMEZONE, getDayKey, getDaysFromNow, getMonthKey, getWeekKey, resolveTimezone } from '@/utils/time';
 import {
   fetchGitHubRepos,
   fetchGitHubUser,
@@ -340,20 +340,6 @@ function saveAuthorIdentity(
   authorEmail: string,
   authorName: string
 ): void {
-  const existing = db
-    .prepare(
-      `
-        SELECT id
-        FROM author_identities
-        WHERE user_id = ? AND canonical_author_id = ? AND github_login = ? AND author_email = ?
-      `
-    )
-    .get(userId, canonicalAuthorId, authorLogin, authorEmail) as { id: number } | undefined;
-
-  if (existing) {
-    return;
-  }
-
   db.prepare(
     `
       INSERT INTO author_identities (
@@ -365,6 +351,11 @@ function saveAuthorIdentity(
         is_primary
       )
       VALUES (?, ?, ?, ?, ?, 0)
+      ON CONFLICT(user_id, canonical_author_id, github_login, author_email) DO UPDATE SET
+        author_name = CASE
+          WHEN excluded.author_name <> '' THEN excluded.author_name
+          ELSE author_identities.author_name
+        END
     `
   ).run(userId, canonicalAuthorId, authorLogin, authorEmail, authorName);
 }
@@ -400,10 +391,10 @@ async function syncRepository(
   const commits = await fetchRepoCommits(token, repository.owner.login, repository.name, since);
   const insertStatement = db.prepare(
     `
-      INSERT OR REPLACE INTO commits (
-        sha,
-        repo_id,
+      INSERT INTO commits (
         user_id,
+        repo_id,
+        sha,
         author_login,
         author_name,
         author_email,
@@ -414,10 +405,20 @@ async function syncRepository(
         is_bot
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(repo_id, sha) DO UPDATE SET
+        user_id = excluded.user_id,
+        author_login = excluded.author_login,
+        author_name = excluded.author_name,
+        author_email = excluded.author_email,
+        canonical_author_id = excluded.canonical_author_id,
+        commit_time = excluded.commit_time,
+        message = excluded.message,
+        is_merge_commit = excluded.is_merge_commit,
+        is_bot = excluded.is_bot
     `
   );
 
-  const normalizedAliases = config.emailAliases.map((item) => item.toLowerCase());
+  const normalizedAliases = config.emailAliases.map((item) => escapeHtml(item.toLowerCase()));
 
   for (const item of commits) {
     const authorLogin = escapeHtml(item.author?.login ?? '');
@@ -446,9 +447,9 @@ async function syncRepository(
       item.parents.length > 1 || item.commit.message.toLowerCase().startsWith('merge ');
 
     insertStatement.run(
-      item.sha,
-      repoId,
       userId,
+      repoId,
+      item.sha,
       authorLogin,
       authorName,
       authorEmail,
@@ -967,9 +968,10 @@ function generateInsightCards(userId: string): void {
 }
 
 function recomputeAllAnalytics(userId: string, timezone: string): void {
-  const metrics = recomputeActivityTables(userId, timezone);
+  const safeTimezone = resolveTimezone(timezone);
+  const metrics = recomputeActivityTables(userId, safeTimezone);
   writeStackTagsForUser(userId);
-  writeRepoScores(userId, metrics, timezone);
+  writeRepoScores(userId, metrics, safeTimezone);
   generateInsightCards(userId);
 }
 

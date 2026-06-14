@@ -17,13 +17,13 @@ import {
   User
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ConfigWorkbench } from '@/components/commons/ConfigWorkbench';
 import { EmptyState } from '@/components/commons/EmptyState';
 import { LoadingBlock } from '@/components/commons/LoadingBlock';
 import { PanelHeading } from '@/components/commons/PanelHeading';
 import { ScoreRing } from '@/components/commons/ScoreRing';
 import { useAppStore } from '@/store/appStore';
 import type {
-  ConfigPayload,
   HeatmapCell,
   InsightCard,
   OverviewData,
@@ -35,19 +35,11 @@ import {
   fetchInsights,
   fetchOverview,
   fetchRepositoryActivity,
-  fetchRepositoryDetail,
-  saveConfig,
-  triggerFullSync,
-  triggerIncrementalSync
+  fetchRepositoryDetail
 } from '@/utils/api';
 import { formatDateTime, formatNumber, translateSyncStatus } from '@/utils/date';
 import { buildHeatmapMatrix, buildHeatmapMonthLabels, getLongestHeatmapStreak } from '@/utils/heatmap';
 import './index.scss';
-
-interface ConfigFormState extends ConfigPayload {
-  githubToken: string;
-  emailAliasesText: string;
-}
 
 type MetricIconName = 'repos' | 'commits' | 'active' | 'views' | 'clones';
 type HeaderIconName = 'user' | 'clock' | 'sync' | 'success' | 'github' | 'settings';
@@ -85,7 +77,7 @@ const METRIC_ICON_MAP: Record<MetricIconName, LucideIcon> = {
  * 默认值：无。
  */
 function DashboardPage(): JSX.Element {
-  const { config, selectedRepoId, setConfig, setSelectedRepoId } = useAppStore();
+  const { config, selectedRepoId, setSelectedRepoId } = useAppStore();
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [insights, setInsights] = useState<InsightCard[]>([]);
   const [featuredRepo, setFeaturedRepo] = useState<RepoDetail | null>(null);
@@ -96,35 +88,7 @@ function DashboardPage(): JSX.Element {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [actionError, setActionError] = useState<string>('');
-  const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [configModalOpen, setConfigModalOpen] = useState<boolean>(false);
-  const [formState, setFormState] = useState<ConfigFormState>({
-    githubUsername: '',
-    githubToken: '',
-    emailAliases: [],
-    emailAliasesText: '',
-    includePrivateRepos: false,
-    syncIntervalMinutes: 720,
-    defaultTimeRange: '30d',
-    timezone: 'Asia/Shanghai'
-  });
-
-  useEffect(() => {
-    if (!config) {
-      return;
-    }
-
-    setFormState({
-      githubUsername: config.githubUsername,
-      githubToken: '',
-      emailAliases: config.emailAliases,
-      emailAliasesText: config.emailAliases.join(', '),
-      includePrivateRepos: config.includePrivateRepos,
-      syncIntervalMinutes: config.syncIntervalMinutes,
-      defaultTimeRange: config.defaultTimeRange as '30d' | '90d' | '180d' | '365d',
-      timezone: config.timezone
-    });
-  }, [config]);
 
   useEffect(() => {
     if (!config) {
@@ -258,58 +222,12 @@ function DashboardPage(): JSX.Element {
 
   const metricIcons: MetricIconName[] = ['repos', 'commits', 'active', 'views', 'clones'];
 
-  const saveConfigHandler = async (): Promise<void> => {
-    setActionLoading(true);
-    setActionError('');
-
-    try {
-      const payload: ConfigPayload = {
-        githubUsername: formState.githubUsername.trim(),
-        githubToken: formState.githubToken.trim() || undefined,
-        emailAliases: formState.emailAliasesText
-          .split(',')
-          .map((item) => item.trim())
-          .filter((item) => item.length > 0),
-        includePrivateRepos: formState.includePrivateRepos,
-        syncIntervalMinutes: formState.syncIntervalMinutes,
-        defaultTimeRange: formState.defaultTimeRange,
-        timezone: formState.timezone.trim()
-      };
-
-      const result = await saveConfig(payload);
-      setConfig(result);
-      setFormState((current) => ({
-        ...current,
-        githubToken: '',
-        emailAliasesText: result.emailAliases.join(', ')
-      }));
-      setConfigModalOpen(false);
-    } catch (requestError) {
-      setActionError(requestError instanceof Error ? requestError.message : '保存配置失败');
-    } finally {
-      setActionLoading(false);
-    }
+  const openConfigQuickConfig = (): void => {
+    setConfigModalOpen(true);
   };
 
-  const syncHandler = async (mode: 'full' | 'incremental'): Promise<void> => {
-    setActionLoading(true);
-    setActionError('');
-
-    try {
-      if (mode === 'full') {
-        await triggerFullSync();
-      } else {
-        await triggerIncrementalSync();
-      }
-
-      const [overviewResult, insightsResult] = await Promise.all([fetchOverview(), fetchInsights()]);
-      setOverview(overviewResult);
-      setInsights(insightsResult);
-    } catch (requestError) {
-      setActionError(requestError instanceof Error ? requestError.message : '同步失败');
-    } finally {
-      setActionLoading(false);
-    }
+  const closeConfigQuickConfig = (): void => {
+    setConfigModalOpen(false);
   };
 
   if (loading) {
@@ -348,12 +266,12 @@ function DashboardPage(): JSX.Element {
           subValue={config?.includePrivateRepos ? '公开仓库 + 私有仓库' : '仅同步公开仓库'}
         />
         <div className="dashboard__topbar-actions">
-          <button className="dashboard__connect" onClick={() => setConfigModalOpen(true)} disabled={actionLoading}>
+          <button className="dashboard__connect" onClick={openConfigQuickConfig}>
             <span className="dashboard__connect-dot" aria-hidden="true" />
             <HeaderIcon name="github" />
             <span>GitHub 连接</span>
           </button>
-          <button className="dashboard__gear" onClick={() => setConfigModalOpen(true)} disabled={actionLoading}>
+          <button className="dashboard__gear" onClick={openConfigQuickConfig} aria-label="打开快捷配置">
             <HeaderIcon name="settings" />
           </button>
         </div>
@@ -661,131 +579,38 @@ function DashboardPage(): JSX.Element {
 
       {configModalOpen && (
         <div
-          className="dashboard-modal__backdrop"
+          className="dashboard-config-modal__backdrop"
           onClick={() => {
-            if (!actionLoading) {
-              setConfigModalOpen(false);
-            }
+            closeConfigQuickConfig();
           }}
         >
           <section
-            className="dashboard-modal"
+            className="dashboard-config-modal"
             onClick={(event) => {
               event.stopPropagation();
             }}
           >
-            <div className="dashboard-modal__header">
-              <div>
-                <p className="dashboard-modal__eyebrow">GitHub Source Config</p>
-                <h2 className="dashboard-modal__title">配置 GitHub 数据源</h2>
-                <p className="dashboard-modal__description">填写 GitHub 用户名、Token、邮箱别名和同步参数，然后保存。</p>
+            <header className="dashboard-config-modal__header">
+              <div className="dashboard-config-modal__copy">
+                <p className="dashboard-config-modal__eyebrow">Quick Config</p>
+                <h2 className="dashboard-config-modal__title">首页快捷配置</h2>
+                <p className="dashboard-config-modal__description">
+                  此弹窗与配置中心使用同一套配置项、同一套保存逻辑和同一套说明文案。
+                </p>
               </div>
-              <button type="button" className="dashboard-modal__close" onClick={() => setConfigModalOpen(false)} disabled={actionLoading}>
-                关闭
-              </button>
-            </div>
+              <div className="dashboard-config-modal__actions">
+                <Link className="dashboard-config-modal__link" to="/config-center" onClick={() => setConfigModalOpen(false)}>
+                  打开独立配置中心
+                </Link>
+                <button type="button" className="dashboard-config-modal__close" onClick={closeConfigQuickConfig}>
+                  关闭
+                </button>
+              </div>
+            </header>
 
-            <div className="form-grid">
-              <label className="form-field">
-                <span className="form-field__label">GitHub 用户名</span>
-                <input
-                  value={formState.githubUsername}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, githubUsername: event.target.value }))
-                  }
-                  placeholder="例如：octocat"
-                />
-              </label>
-              <label className="form-field">
-                <span className="form-field__label">GitHub Token</span>
-                <input
-                  type="password"
-                  value={formState.githubToken}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, githubToken: event.target.value }))
-                  }
-                  placeholder={config?.hasToken ? '保持为空则沿用已有 Token' : '输入新 Token'}
-                />
-              </label>
-              <label className="form-field form-grid__full">
-                <span className="form-field__label">邮箱别名</span>
-                <input
-                  value={formState.emailAliasesText}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, emailAliasesText: event.target.value }))
-                  }
-                  placeholder="多个邮箱使用逗号分隔"
-                />
-              </label>
-              <label className="form-field">
-                <span className="form-field__label">同步周期（分钟）</span>
-                <input
-                  type="number"
-                  min={15}
-                  max={1440}
-                  value={formState.syncIntervalMinutes}
-                  onChange={(event) =>
-                    setFormState((current) => ({
-                      ...current,
-                      syncIntervalMinutes: Number(event.target.value)
-                    }))
-                  }
-                />
-              </label>
-              <label className="form-field">
-                <span className="form-field__label">默认时间范围</span>
-                <select
-                  value={formState.defaultTimeRange}
-                  onChange={(event) =>
-                    setFormState((current) => ({
-                      ...current,
-                      defaultTimeRange: event.target.value as '30d' | '90d' | '180d' | '365d'
-                    }))
-                  }
-                >
-                  <option value="30d">30 天</option>
-                  <option value="90d">90 天</option>
-                  <option value="180d">180 天</option>
-                  <option value="365d">365 天</option>
-                </select>
-              </label>
-              <label className="form-field form-grid__full">
-                <span className="form-field__label">时区</span>
-                <input
-                  value={formState.timezone}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, timezone: event.target.value }))
-                  }
-                  placeholder="Asia/Shanghai"
-                />
-              </label>
-              <label className="dashboard-modal__checkbox">
-                <input
-                  type="checkbox"
-                  checked={formState.includePrivateRepos}
-                  onChange={(event) =>
-                    setFormState((current) => ({
-                      ...current,
-                      includePrivateRepos: event.target.checked
-                    }))
-                  }
-                />
-                <span>同步私有仓库</span>
-              </label>
+            <div className="dashboard-config-modal__body">
+              <ConfigWorkbench variant="modal" />
             </div>
-
-            <div className="dashboard-modal__actions">
-              <button type="button" onClick={() => void saveConfigHandler()} disabled={actionLoading}>
-                保存配置
-              </button>
-              <button type="button" onClick={() => void syncHandler('incremental')} disabled={actionLoading}>
-                增量同步
-              </button>
-              <button type="button" onClick={() => void syncHandler('full')} disabled={actionLoading}>
-                全量同步
-              </button>
-            </div>
-            {actionError && <div className="dashboard-modal__error">{actionError}</div>}
           </section>
         </div>
       )}
