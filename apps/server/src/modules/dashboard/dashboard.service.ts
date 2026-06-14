@@ -9,6 +9,11 @@ interface DailyActivityRow {
   commit_count: number;
 }
 
+interface PersonalHeatmapCommitRow {
+  repo_id: number;
+  commit_time: string;
+}
+
 interface StatisticsRange {
   mode: 'preset' | 'custom';
   days: number;
@@ -30,6 +35,60 @@ interface StatisticsHistoryCoverage {
 }
 
 /* 汇总首页总览数据，减少前端并发请求数量。 */
+/* 基于个人提交明细重新聚合热力图，避免按天汇总结果被重复关联放大。 */
+/* 鍩轰簬涓汉鎻愪氦鏄庣粏閲嶆柊鑱氬悎鐑姏鍥撅紝閬垮厤鎸夊ぉ姹囨€荤粨鏋滆閲嶅鍏宠仈鏀惧ぇ銆?*/
+function getPersonalHeatmapSource(
+  userId: string,
+  timezone: string
+): Array<{ activityDate: string; commitCount: number; repoCount: number }> {
+  const startDate = getDayKey(subDays(new Date(), 364), timezone);
+  const startIso = fromZonedTime(`${startDate}T00:00:00`, timezone).toISOString();
+  const commits = db
+    .prepare(
+      `
+        SELECT repo_id, commit_time
+        FROM commits
+        WHERE user_id = ? AND canonical_author_id = ? AND is_merge_commit = 0 AND is_bot = 0 AND commit_time >= ?
+        ORDER BY commit_time ASC
+      `
+    )
+    .all(userId, `user:${userId}`, startIso) as PersonalHeatmapCommitRow[];
+
+  const activityMap = new Map<
+    string,
+    {
+      activityDate: string;
+      commitCount: number;
+      repoIds: Set<number>;
+    }
+  >();
+
+  for (const item of commits) {
+    const activityDate = getDayKey(item.commit_time, timezone);
+    const current = activityMap.get(activityDate);
+
+    if (current) {
+      current.commitCount += 1;
+      current.repoIds.add(item.repo_id);
+      continue;
+    }
+
+    activityMap.set(activityDate, {
+      activityDate,
+      commitCount: 1,
+      repoIds: new Set<number>([item.repo_id])
+    });
+  }
+
+  return [...activityMap.values()]
+    .map((item) => ({
+      activityDate: item.activityDate,
+      commitCount: item.commitCount,
+      repoCount: item.repoIds.size
+    }))
+    .sort((left, right) => left.activityDate.localeCompare(right.activityDate));
+}
+
 export function getOverview(userId: string): {
   header: {
     title: string;
@@ -117,30 +176,7 @@ export function getOverview(userId: string): {
     )
     .all(userId, getDayKey(subDays(new Date(), 29), config.timezone)) as DailyActivityRow[];
 
-  const personalHeatmapSource = db
-    .prepare(
-      `
-        SELECT
-          repo_activity_daily.activity_date AS activityDate,
-          SUM(repo_activity_daily.commit_count) AS commitCount,
-          COUNT(DISTINCT repo_activity_daily.repo_id) AS repoCount
-        FROM repo_activity_daily
-        INNER JOIN commits ON commits.repo_id = repo_activity_daily.repo_id
-        WHERE repo_activity_daily.user_id = ?
-          AND commits.user_id = ?
-          AND commits.canonical_author_id = ?
-          AND commits.is_merge_commit = 0
-          AND commits.is_bot = 0
-          AND repo_activity_daily.activity_date >= ?
-        GROUP BY repo_activity_daily.activity_date
-        ORDER BY repo_activity_daily.activity_date ASC
-      `
-    )
-    .all(userId, userId, `user:${userId}`, getDayKey(subDays(new Date(), 364), config.timezone)) as Array<{
-    activityDate: string;
-    commitCount: number;
-    repoCount: number;
-  }>;
+  const personalHeatmapSource = getPersonalHeatmapSource(userId, config.timezone);
 
   const rankings = db
     .prepare(
@@ -594,7 +630,7 @@ export function getStatistics(
       label: '总仓库数',
       value: totalReposRow.count,
       hint: '纳入同步范围',
-      ...buildChangeMeta(totalReposRow.count, Math.max(0, totalReposRow.count - previousActiveReposRow.count), true)
+      ...buildChangeMeta(totalReposRow.count, totalReposRow.count, false)
     },
     {
       id: 'active-repos',

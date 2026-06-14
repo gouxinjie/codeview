@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { refreshUserSchedule } from '@/config/scheduler';
 import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '@/utils/http';
 import { getConfig, saveConfig, validateCsrfToken } from '@/modules/config/config.service';
 
@@ -41,6 +42,8 @@ configRouter.post(
       return;
     }
 
-    sendSuccess(response, saveConfig(payload));
+    const savedConfig = saveConfig(payload);
+    refreshUserSchedule(savedConfig.userId, savedConfig.syncIntervalMinutes, savedConfig.hasToken);
+    sendSuccess(response, savedConfig);
   })
 );
