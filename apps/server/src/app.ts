@@ -5,6 +5,7 @@ import '@/database/client';
 import { configRouter } from '@/modules/config/config.routes';
 import { dashboardRouter } from '@/modules/dashboard/dashboard.routes';
 import { reposRouter } from '@/modules/repos/repos.routes';
+import { stackRouter } from '@/modules/stack/stack.routes';
 import { syncRouter } from '@/modules/sync/sync.routes';
 import { sendFailure } from '@/utils/http';
 import { logger } from '@/utils/logger';
@@ -35,6 +36,7 @@ export function createApp(): express.Express {
   app.use('/api', syncRouter);
   app.use('/api', dashboardRouter);
   app.use('/api', reposRouter);
+  app.use('/api', stackRouter);
 
   app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
     logger.error('接口异常', {

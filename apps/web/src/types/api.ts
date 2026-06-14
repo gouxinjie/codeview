@@ -160,6 +160,94 @@ export interface RepoRecentCommit {
   commitTime: string;
 }
 
+export type StackAnalysisTrendDirection = 'up' | 'down' | 'flat';
+
+export interface StackAnalysisSummaryCard {
+  id: string;
+  label: string;
+  value: string;
+  hint: string;
+  trend: string;
+  trendDirection: StackAnalysisTrendDirection;
+}
+
+export interface StackAnalysisLanguageItem {
+  name: string;
+  bytes: number;
+  percentage: number;
+}
+
+export interface StackAnalysisCategoryItem {
+  name: string;
+  techCount: number;
+  percentage: number;
+}
+
+export interface StackAnalysisTopTechItem {
+  name: string;
+  category: string;
+  repoCount: number;
+  activeRepoCount: number;
+  percentage: number;
+  heat: number;
+  trend: number;
+  commitCount30d: number;
+}
+
+export interface StackAnalysisTrendSeriesItem {
+  name: string;
+  category: string;
+  values: number[];
+}
+
+export interface StackAnalysisEmergingTechItem {
+  name: string;
+  category: string;
+  firstSeenAt: string;
+  repoCount: number;
+  representativeRepo: string;
+}
+
+export interface StackAnalysisMatrixRow {
+  repoId: number;
+  repoName: string;
+  activeDays30d: number;
+  commitCount30d: number;
+  intensityLabel: string;
+  values: number[];
+}
+
+export interface StackAnalysisRelationItem {
+  source: string;
+  target: string;
+  weight: number;
+}
+
+export interface StackAnalysisData {
+  header: {
+    title: string;
+    githubUsername: string;
+    lastSyncedAt: string | null;
+    syncStatus: string;
+    currentTime: string;
+  };
+  appliedWindow: {
+    months: number;
+    startMonth: string;
+    endMonth: string;
+  };
+  summaryCards: StackAnalysisSummaryCard[];
+  languageDistribution: StackAnalysisLanguageItem[];
+  categoryDistribution: StackAnalysisCategoryItem[];
+  topTechStacks: StackAnalysisTopTechItem[];
+  trendMonths: string[];
+  trendSeries: StackAnalysisTrendSeriesItem[];
+  emergingTechStacks: StackAnalysisEmergingTechItem[];
+  matrixColumns: string[];
+  projectMatrix: StackAnalysisMatrixRow[];
+  relationships: StackAnalysisRelationItem[];
+}
+
 export interface StatisticsSummaryCard {
   id: string;
   label: string;

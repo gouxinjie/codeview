@@ -12,6 +12,7 @@ import type {
   RepoListItem,
   RepoStackDetail,
   RepoTrafficPoint,
+  StackAnalysisData,
   StatisticsData,
   SyncStatus
 } from '@/types/api';
@@ -161,6 +162,14 @@ export function fetchRepositoryRecentCommits(repoId: number): Promise<RepoRecent
 }
 
 /* 获取数据统计页聚合数据。 */
+export function fetchStackAnalysis(filters?: {
+  months?: 6 | 12 | 24;
+}): Promise<StackAnalysisData> {
+  return requestApi<StackAnalysisData>('/stack-analysis', {
+    query: filters
+  });
+}
+
 export function fetchStatistics(filters?: {
   rangeDays?: 7 | 30 | 90;
   startDate?: string;

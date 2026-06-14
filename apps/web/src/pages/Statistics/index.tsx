@@ -397,11 +397,7 @@ function StatisticsPage(): ReactElement {
       <section className="statistics-page__grid statistics-page__grid--secondary">
         <article className="statistics-panel statistics-panel--donut">
           <PanelHeading title="仓库语言分布" />
-          <ReactECharts
-            option={buildDonutOption(statistics.languageDistribution, '主要语言')}
-            style={{ height: 224 }}
-            opts={{ renderer: 'svg' }}
-          />
+          <DonutPanelContent data={statistics.languageDistribution} centerLabel="主要语言" />
           <div className="statistics-panel__donut-meta">
             <span>语言数：{formatNumber(statistics.languageDistribution.length)}</span>
             <span>主语言：{statistics.languageDistribution[0]?.name || '--'}</span>
@@ -410,11 +406,7 @@ function StatisticsPage(): ReactElement {
 
         <article className="statistics-panel statistics-panel--donut">
           <PanelHeading title="提交作者分布（个人 vs 其他）" />
-          <ReactECharts
-            option={buildDonutOption(statistics.authorDistribution, '个人提交')}
-            style={{ height: 224 }}
-            opts={{ renderer: 'svg' }}
-          />
+          <DonutPanelContent data={statistics.authorDistribution} centerLabel="个人提交" />
           <div className="statistics-panel__donut-meta">
             <span>总提交数：{formatNumber(sumBreakdown(statistics.authorDistribution))}</span>
             <span>个人占比：{getPrimaryBreakdownRatio(statistics.authorDistribution)}</span>
@@ -423,11 +415,7 @@ function StatisticsPage(): ReactElement {
 
         <article className="statistics-panel statistics-panel--donut">
           <PanelHeading title="提交类型分布" />
-          <ReactECharts
-            option={buildDonutOption(statistics.commitTypeDistribution, '提交类型')}
-            style={{ height: 224 }}
-            opts={{ renderer: 'svg' }}
-          />
+          <DonutPanelContent data={statistics.commitTypeDistribution} centerLabel="提交类型" />
           <div className="statistics-panel__donut-meta">
             <span>总提交数：{formatNumber(sumBreakdown(statistics.commitTypeDistribution))}</span>
             <span>主要类型：{statistics.commitTypeDistribution[0]?.name || '--'}</span>
@@ -519,6 +507,40 @@ function PanelHeading(props: PanelHeadingProps): ReactElement {
       <h2>{title}</h2>
       {accessory}
     </header>
+  );
+}
+
+function DonutPanelContent(props: {
+  data: StatisticsBreakdownItem[];
+  centerLabel: string;
+}): ReactElement {
+  const { data, centerLabel } = props;
+
+  return (
+    <div className="statistics-panel__donut-layout">
+      <div className="statistics-panel__donut-chart">
+        <ReactECharts
+          option={buildDonutOption(data, centerLabel)}
+          style={{ height: 236 }}
+          opts={{ renderer: 'svg' }}
+        />
+      </div>
+      <div className="statistics-panel__donut-legend">
+        {buildDonutLegendItems(data).map((item) => (
+          <div key={item.name} className="statistics-panel__donut-legend-item">
+            <span className="statistics-panel__donut-legend-label">
+              <i
+                className="statistics-panel__donut-legend-dot"
+                style={{ backgroundColor: item.color }}
+                aria-hidden="true"
+              />
+              <span title={item.name}>{item.name}</span>
+            </span>
+            <strong>{item.percentage.toFixed(1)}%</strong>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -813,60 +835,54 @@ function buildStatisticsTrendOption(data: TrendPoint[]): EChartsOption {
   };
 }
 
-function buildDonutOption(data: StatisticsBreakdownItem[], centerLabel: string): EChartsOption {
+function buildDonutLegendItems(
+  data: StatisticsBreakdownItem[]
+): Array<{ name: string; value: number; percentage: number; color: string }> {
   const total = data.reduce((sum, item) => sum + item.value, 0);
-  const normalizedData = data.map((item) => ({
-    name: item.name,
-    value: item.value,
-    percentage: total > 0 ? Number(((item.value / total) * 100).toFixed(1)) : 0
-  }));
-  const primary = normalizedData[0];
   const colors = ['#c5e832', '#668cff', '#8fda6b', '#7d85ff', '#f4c44e', '#5ab8ff'];
 
+  return data.map((item, index) => ({
+    name: item.name,
+    value: item.value,
+    percentage: total > 0 ? Number(((item.value / total) * 100).toFixed(1)) : 0,
+    color: colors[index] ?? '#aab5a3'
+  }));
+}
+
+function buildDonutOption(data: StatisticsBreakdownItem[], centerLabel: string): EChartsOption {
+  const normalizedData = buildDonutLegendItems(data);
+  const primary = normalizedData[0];
+
   return {
-    color: colors,
+    color: normalizedData.map((item) => item.color),
     tooltip: {
       trigger: 'item',
+      confine: true,
       backgroundColor: '#0d1114',
       borderColor: 'rgba(184,255,59,0.18)',
       textStyle: {
         color: '#f3ebdd'
       }
     },
-    legend: {
-      orient: 'vertical',
-      right: 4,
-      top: 'center',
-      icon: 'circle',
-      itemWidth: 8,
-      itemHeight: 8,
-      textStyle: {
-        color: '#d7dccf',
-        fontSize: 11
-      },
-      formatter: (value: string) => {
-        const target = normalizedData.find((item) => item.name === value);
-        return target ? `${value}   ${target.percentage.toFixed(1)}%` : value;
-      }
-    },
     title: {
       text: primary ? `${centerLabel}\n${primary.name}\n${primary.percentage.toFixed(1)}%` : '暂无数据',
-      left: '33%',
-      top: '36%',
+      left: '50%',
+      top: '36.5%',
       textAlign: 'center',
       textStyle: {
         color: '#f3ebdd',
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: 600,
-        lineHeight: 20
+        lineHeight: 18
       }
     },
     series: [
       {
         type: 'pie',
-        radius: ['52%', '72%'],
-        center: ['35%', '51%'],
+        radius: ['52%', '78%'],
+        center: ['50%', '52%'],
         startAngle: 95,
+        avoidLabelOverlap: true,
         label: {
           show: false
         },
