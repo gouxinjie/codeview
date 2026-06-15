@@ -68,6 +68,13 @@ DEFAULT_USER_ID=local-user
 ENCRYPTION_SECRET=替换成足够长的随机字符串
 ```
 
+如果宿主机 `80` 端口已经被其他服务占用，可以改成：
+
+```env
+CODEVIEW_HTTP_PORT=81
+WEB_ORIGIN=http://你的域名或公网IP:81
+```
+
 说明：
 
 - `CODEVIEW_HTTP_PORT`：宿主机对外端口
@@ -77,6 +84,11 @@ ENCRYPTION_SECRET=替换成足够长的随机字符串
 - `WEB_ORIGIN`：前端实际访问地址
 - `DATABASE_PATH`：容器内数据库路径
 - `ENCRYPTION_SECRET`：GitHub Token 加密密钥
+
+重点：
+
+- `WEB_ORIGIN` 必须与实际访问地址完全一致
+- 如果你把 `CODEVIEW_HTTP_PORT` 改成了 `81`，`WEB_ORIGIN` 也要同步改成 `http://域名或IP:81`
 
 ## GitHub Actions Secrets
 
@@ -174,6 +186,34 @@ ${CODEVIEW_DATA_DIR} -> /app/data
 - 当前项目包含定时同步逻辑，不适合直接横向扩容多个服务端副本
 - `WEB_ORIGIN` 必须与实际访问地址一致，否则服务端 CORS 校验可能失败
 - 生产环境建议只暴露 `80/443` 和必要的 `22`
+
+## 端口冲突处理
+
+如果部署时遇到下面这类错误：
+
+```text
+bind: address already in use
+```
+
+通常表示宿主机上已经有其他服务占用了 `80` 端口，例如宿主机 Nginx。
+
+处理方式有两种：
+
+1. 停掉宿主机占用 `80` 端口的服务，让容器继续使用 `80`
+2. 保留宿主机服务，把 `CODEVIEW_HTTP_PORT` 改成其他端口，例如 `81`
+
+例如：
+
+```bash
+sudo sed -i 's/^CODEVIEW_HTTP_PORT=.*/CODEVIEW_HTTP_PORT=81/' /var/www/codeview/shared/codeview.env
+sudo sed -i 's|^WEB_ORIGIN=.*|WEB_ORIGIN=http://你的域名或公网IP:81|' /var/www/codeview/shared/codeview.env
+```
+
+然后重新执行：
+
+```bash
+docker compose --project-name codeview --file /var/www/codeview/releases/<commit_sha>/compose.yaml --env-file /var/www/codeview/shared/codeview.env up -d
+```
 
 ## 首次部署建议
 

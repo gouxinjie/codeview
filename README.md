@@ -230,6 +230,25 @@ GitHub 接口整理文档见：
 
 - [项目使用的GitHub接口整理](./docx/项目使用的GitHub接口整理.md)
 
+## 部署说明
+
+当前仓库已提供一套可直接用于阿里云 ECS 的部署方案：
+
+- GitHub Actions 构建镜像
+- 推送到阿里云 ACR
+- ECS 使用 Docker Compose 拉取镜像并启动
+
+如果宿主机 `80` 端口已被占用，可以通过 `CODEVIEW_HTTP_PORT` 改到其他端口，例如 `81`。此时需要同步把 `WEB_ORIGIN` 改成实际访问地址，例如：
+
+```env
+CODEVIEW_HTTP_PORT=81
+WEB_ORIGIN=http://你的域名或公网IP:81
+```
+
+详细部署步骤见：
+
+- [Docker Compose部署到ECS说明](./docx/Docker%20Compose部署到ECS说明.md)
+
 ## 页面设计图
 
 ### 首页
