@@ -10,7 +10,7 @@
 - `apps/server/Dockerfile`
 - `apps/web/Dockerfile`
 - `deploy/nginx/default.conf`
-- `deploy/codeview.env.example`
+- `deploy/.env.example`
 - `.github/workflows/deploy-ecs-compose.yml`
 
 ## 部署结构
@@ -38,6 +38,7 @@
 ```bash
 sudo mkdir -p /var/www/codeview/releases
 sudo mkdir -p /var/www/codeview/shared/data
+sudo mkdir -p /var/www/codeview/shared
 ```
 
 ## 服务端环境文件
@@ -45,13 +46,13 @@ sudo mkdir -p /var/www/codeview/shared/data
 工作流会在 ECS 上通过下面的文件启动 Compose：
 
 ```text
-/var/www/codeview/shared/codeview.env
+/var/www/codeview/shared/.env
 ```
 
 可参考仓库内示例文件：
 
 ```text
-deploy/codeview.env.example
+deploy/.env.example
 ```
 
 示例内容：
@@ -132,9 +133,40 @@ WEB_ORIGIN=http://你的域名或公网IP:81
 7. 通过 SSH 上传压缩包到 ECS
 8. 在 ECS 创建发布目录 `/var/www/codeview/releases/<commit_sha>`
 9. 解压代码
-10. ECS 登录 ACR
-11. 使用 `docker compose pull`
-12. 使用 `docker compose up -d`
+10. 更新软链接 `/var/www/codeview/current`
+11. ECS 登录 ACR
+12. 使用 `docker compose pull`
+13. 使用 `docker compose up -d`
+14. 自动清理旧版本目录，仅保留最新 2 个 release
+
+## current 软链接说明
+
+工作流会在每次部署后自动维护一个固定软链接：
+
+```text
+/var/www/codeview/current
+```
+
+它始终指向当前最新成功部署的发布目录。
+
+这样做的好处是：
+
+- 手动排查和重启时不需要再手动找最新 commit 目录
+- `docker compose` 手动命令可以固定写法
+- 发布目录保留历史版本，便于回滚
+
+## release 保留策略
+
+当前 workflow 会在部署成功后自动清理旧版本目录：
+
+- `releases/` 下只保留最新 2 个版本目录
+- `current` 始终指向当前最新成功部署的版本
+
+这样设计的目的：
+
+- 保留当前运行版本
+- 保留上一个版本，便于快速回滚
+- 避免 `releases/` 目录长期无限增长
 
 ## 容器运行说明
 
@@ -205,14 +237,14 @@ bind: address already in use
 例如：
 
 ```bash
-sudo sed -i 's/^CODEVIEW_HTTP_PORT=.*/CODEVIEW_HTTP_PORT=81/' /var/www/codeview/shared/codeview.env
-sudo sed -i 's|^WEB_ORIGIN=.*|WEB_ORIGIN=http://你的域名或公网IP:81|' /var/www/codeview/shared/codeview.env
+sudo sed -i 's/^CODEVIEW_HTTP_PORT=.*/CODEVIEW_HTTP_PORT=81/' /var/www/codeview/shared/.env
+sudo sed -i 's|^WEB_ORIGIN=.*|WEB_ORIGIN=http://你的域名或公网IP:81|' /var/www/codeview/shared/.env
 ```
 
 然后重新执行：
 
 ```bash
-docker compose --project-name codeview --file /var/www/codeview/releases/<commit_sha>/compose.yaml --env-file /var/www/codeview/shared/codeview.env up -d
+docker compose --project-name codeview --file /var/www/codeview/current/compose.yaml --env-file /var/www/codeview/shared/.env up -d
 ```
 
 ## 首次部署建议
@@ -220,7 +252,27 @@ docker compose --project-name codeview --file /var/www/codeview/releases/<commit
 首次上线前，建议在 ECS 手动执行一次：
 
 ```bash
-docker compose --project-name codeview --file /var/www/codeview/releases/<commit_sha>/compose.yaml --env-file /var/www/codeview/shared/codeview.env config
+docker compose --project-name codeview --file /var/www/codeview/current/compose.yaml --env-file /var/www/codeview/shared/.env config
 ```
 
 用于确认环境变量和挂载路径是否正确。
+
+## 常用手动命令
+
+查看状态：
+
+```bash
+docker compose --project-name codeview --file /var/www/codeview/current/compose.yaml --env-file /var/www/codeview/shared/.env ps
+```
+
+手动重启：
+
+```bash
+docker compose --project-name codeview --file /var/www/codeview/current/compose.yaml --env-file /var/www/codeview/shared/.env up -d
+```
+
+查看最近日志：
+
+```bash
+docker compose --project-name codeview --file /var/www/codeview/current/compose.yaml --env-file /var/www/codeview/shared/.env logs --tail=100
+```

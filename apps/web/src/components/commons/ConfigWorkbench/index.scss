@@ -395,6 +395,179 @@
   line-height: 1.6;
 }
 
+.config-field__quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.config-field__quick-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(184, 255, 59, 0.18);
+  border-radius: 999px;
+  color: #dff3b7;
+  background:
+    linear-gradient(180deg, rgba(184, 255, 59, 0.12), rgba(0, 0, 0, 0)),
+    rgba(10, 15, 18, 0.9);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.config-field__quick-link svg {
+  width: 14px;
+  height: 14px;
+}
+
+.config-field__quick-link:hover {
+  transform: none;
+  border-color: rgba(184, 255, 59, 0.28);
+  box-shadow: none;
+}
+
+.config-field__quick-link--ghost {
+  color: #a7b19d;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.config-select-shell {
+  position: relative;
+}
+
+.config-select-shell__trigger {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px 0 16px;
+  border: 1px solid rgba(184, 255, 59, 0.14);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #eef5e5;
+  background:
+    linear-gradient(135deg, rgba(184, 255, 59, 0.08), rgba(184, 255, 59, 0.02) 48%, rgba(0, 0, 0, 0) 100%),
+    rgba(7, 11, 14, 0.94);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.config-select-shell__trigger:hover,
+.config-select-shell__trigger:focus-visible,
+.config-select-shell--open .config-select-shell__trigger {
+  border-color: rgba(184, 255, 59, 0.26);
+  box-shadow: 0 0 0 3px rgba(184, 255, 59, 0.08);
+}
+
+.config-select-shell__value {
+  min-width: 0;
+}
+
+.config-select-shell__trigger > svg {
+  width: 16px;
+  height: 16px;
+  color: #96a68b;
+  flex: none;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.config-select-shell--open .config-select-shell__trigger > svg {
+  color: #dff3b7;
+  transform: rotate(180deg);
+}
+
+.config-select-shell__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 12;
+  padding: 8px;
+  border: 1px solid rgba(184, 255, 59, 0.16);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background:
+    linear-gradient(180deg, rgba(184, 255, 59, 0.05), rgba(0, 0, 0, 0)),
+    rgba(6, 10, 13, 0.98);
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(14px);
+  overflow-y: auto;
+}
+
+.config-select-shell--up .config-select-shell__menu {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+.config-select-shell__option {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  color: #d6ddd0;
+  background: rgba(255, 255, 255, 0.02);
+  text-align: left;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    outline-color 0.18s ease;
+  outline: none;
+}
+
+.config-select-shell__option:hover,
+.config-select-shell__option:focus-visible {
+  transform: none;
+  border-color: rgba(184, 255, 59, 0.18);
+  background: rgba(184, 255, 59, 0.08);
+  box-shadow: none;
+}
+
+.config-select-shell__option--active {
+  border-color: rgba(184, 255, 59, 0.22);
+  color: #f3f8eb;
+  background:
+    linear-gradient(90deg, rgba(184, 255, 59, 0.16), rgba(184, 255, 59, 0.03)),
+    rgba(255, 255, 255, 0.03);
+}
+
+.config-select-shell__option-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.config-select-shell__option-hint {
+  color: #859281;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.config-select-meta {
+  color: #93a087;
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
 .config-field textarea {
   min-height: 108px;
   resize: vertical;
@@ -774,6 +947,7 @@
   .config-center__status-actions {
     flex-direction: column;
   }
+
 
   .config-center__primary-button,
   .config-center__secondary-button {

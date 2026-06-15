@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Clock3,
   Eye,
   EyeOff,
+  ExternalLink,
   GitBranch,
   RefreshCw,
   Save,
@@ -16,7 +18,7 @@ import {
 import { EmptyState } from '@/components/commons/EmptyState';
 import { LoadingBlock } from '@/components/commons/LoadingBlock';
 import { useAppStore } from '@/store/appStore';
-import type { ConfigPayload, SyncStatus } from '@/types/api';
+import type { ConfigPayload, ConfigView, SyncStatus } from '@/types/api';
 import { fetchConfig, fetchSyncStatus, saveConfig, triggerFullSync, triggerIncrementalSync } from '@/utils/api';
 import { formatDateTime, translateSyncStatus } from '@/utils/date';
 import './index.scss';
@@ -84,6 +86,19 @@ interface DangerActionCardProps {
   onClick?: () => void;
 }
 
+interface StrategyOption<TValue extends string | number> {
+  value: TValue;
+  label: string;
+  hint: string;
+}
+
+interface CompactSelectProps<TValue extends string | number> {
+  ariaLabel: string;
+  value: TValue;
+  options: Array<StrategyOption<TValue>>;
+  onChange: (value: TValue) => void;
+}
+
 const HEADER_ICON_MAP: Record<HeaderIconName, LucideIcon> = {
   user: User,
   clock: Clock3,
@@ -100,11 +115,19 @@ const CONFIG_TABS: ConfigTabItem[] = [
   { key: 'about', label: '关于系统', available: false }
 ];
 
-const TIME_RANGE_OPTIONS: Array<{ value: ConfigPayload['defaultTimeRange']; label: string }> = [
-  { value: '30d', label: '最近 30 天' },
-  { value: '90d', label: '最近 90 天' },
-  { value: '180d', label: '最近 180 天' },
-  { value: '365d', label: '最近 365 天' }
+const TIME_RANGE_OPTIONS: Array<StrategyOption<ConfigPayload['defaultTimeRange']>> = [
+  { value: '30d', label: '最近 30 天', hint: '适合观察最近的活跃波动' },
+  { value: '90d', label: '最近 90 天', hint: '兼顾趋势和短期变化' },
+  { value: '180d', label: '最近 180 天', hint: '适合做半年的阶段复盘' },
+  { value: '365d', label: '最近 365 天', hint: '便于查看全年周期变化' }
+];
+
+const SYNC_INTERVAL_OPTIONS: Array<StrategyOption<number>> = [
+  { value: 30, label: '30 分钟', hint: '适合高频开发阶段快速刷新' },
+  { value: 120, label: '2 小时', hint: '白天使用更均衡，更新也足够及时' },
+  { value: 360, label: '6 小时', hint: '兼顾数据刷新与接口额度' },
+  { value: 720, label: '12 小时', hint: '适合个人项目，推荐使用' },
+  { value: 1440, label: '24 小时', hint: '每天同步一次，更节省额度' }
 ];
 
 const RECOMMENDED_TIMEZONES: string[] = [
@@ -114,6 +137,10 @@ const RECOMMENDED_TIMEZONES: string[] = [
   'Europe/London',
   'America/Los_Angeles'
 ];
+
+const GITHUB_TOKEN_SETTINGS_URL = 'https://github.com/settings/tokens';
+const GITHUB_TOKEN_DOCS_URL =
+  'https://docs.github.com/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens';
 
 const INITIAL_FORM_STATE: ConfigFormState = {
   githubUsername: '',
@@ -146,6 +173,54 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
   const [showToken, setShowToken] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>(new Date().toISOString());
   const [localSyncLogs, setLocalSyncLogs] = useState<LocalSyncLogEntry[]>([]);
+  const hasHydratedFormRef = useRef<boolean>(false);
+
+  const configFormState = useMemo<ConfigFormState | null>(() => {
+    if (!config) {
+      return null;
+    }
+
+    return createFormStateFromConfig(config);
+  }, [config]);
+
+  const hasPendingFormChanges = useMemo<boolean>(() => {
+    if (!configFormState) {
+      return false;
+    }
+
+    return (
+      formState.githubUsername !== configFormState.githubUsername ||
+      formState.githubToken.trim().length > 0 ||
+      formState.emailAliasesText !== configFormState.emailAliasesText ||
+      formState.includePrivateRepos !== configFormState.includePrivateRepos ||
+      formState.syncIntervalMinutes !== configFormState.syncIntervalMinutes ||
+      formState.defaultTimeRange !== configFormState.defaultTimeRange ||
+      formState.timezone !== configFormState.timezone
+    );
+  }, [configFormState, formState]);
+
+  const syncIntervalOptions = useMemo<Array<StrategyOption<number>>>(() => {
+    if (SYNC_INTERVAL_OPTIONS.some((item) => item.value === formState.syncIntervalMinutes)) {
+      return SYNC_INTERVAL_OPTIONS;
+    }
+
+    return [
+      {
+        value: formState.syncIntervalMinutes,
+        label: `${formState.syncIntervalMinutes} 分钟`,
+        hint: '当前自定义同步周期'
+      },
+      ...SYNC_INTERVAL_OPTIONS
+    ].sort((left, right) => left.value - right.value);
+  }, [formState.syncIntervalMinutes]);
+
+  const selectedSyncIntervalOption = useMemo<StrategyOption<number> | null>(() => {
+    return syncIntervalOptions.find((item) => item.value === formState.syncIntervalMinutes) ?? null;
+  }, [formState.syncIntervalMinutes, syncIntervalOptions]);
+
+  const selectedTimeRangeOption = useMemo<StrategyOption<ConfigPayload['defaultTimeRange']> | null>(() => {
+    return TIME_RANGE_OPTIONS.find((item) => item.value === formState.defaultTimeRange) ?? null;
+  }, [formState.defaultTimeRange]);
 
   useEffect(() => {
     if (actionSuccess.length === 0) {
@@ -162,21 +237,17 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
   }, [actionSuccess]);
 
   useEffect(() => {
-    if (!config) {
+    if (!configFormState) {
       return;
     }
 
-    setFormState({
-      githubUsername: config.githubUsername,
-      githubToken: '',
-      emailAliases: config.emailAliases,
-      emailAliasesText: config.emailAliases.join('\n'),
-      includePrivateRepos: config.includePrivateRepos,
-      syncIntervalMinutes: config.syncIntervalMinutes,
-      defaultTimeRange: normalizeDefaultTimeRange(config.defaultTimeRange),
-      timezone: config.timezone
-    });
-  }, [config]);
+    if (hasHydratedFormRef.current && hasPendingFormChanges) {
+      return;
+    }
+
+    setFormState(configFormState);
+    hasHydratedFormRef.current = true;
+  }, [configFormState, hasPendingFormChanges]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -298,16 +369,7 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
 
       const result = await saveConfig(payload);
       setConfig(result);
-      setFormState((current) => ({
-        ...current,
-        githubToken: '',
-        emailAliases: result.emailAliases,
-        emailAliasesText: result.emailAliases.join('\n'),
-        includePrivateRepos: result.includePrivateRepos,
-        syncIntervalMinutes: result.syncIntervalMinutes,
-        defaultTimeRange: normalizeDefaultTimeRange(result.defaultTimeRange),
-        timezone: result.timezone
-      }));
+      setFormState(createFormStateFromConfig(result));
       setActionSuccess('配置已保存。');
     } catch (requestError) {
       setActionError(requestError instanceof Error ? requestError.message : '保存配置失败');
@@ -360,7 +422,7 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
         <TopInfoCell
           icon="user"
           label="用户名"
-          value={config.githubUsername || 'your-username'}
+          value={config.githubUsername || '未填写'}
           subValue={config.hasToken ? 'GitHub 已连接' : '等待接入 GitHub Token'}
         />
         <TopInfoCell
@@ -442,7 +504,7 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
           <article className="config-panel">
             <header className="config-panel__header">
               <div>
-                <p className="config-panel__eyebrow">Account</p>
+                <p className="config-panel__eyebrow">账户</p>
                 <h2>GitHub 账号配置</h2>
               </div>
             </header>
@@ -463,7 +525,7 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
             </label>
 
             <label className="config-field">
-              <span className="config-field__label">Personal Access Token</span>
+              <span className="config-field__label">访问令牌（PAT）</span>
               <div className="config-field__input-wrap config-field__input-wrap--with-button">
                 <input
                   type={showToken ? 'text' : 'password'}
@@ -488,13 +550,33 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
               <span className={config.hasToken ? 'config-center__token-status config-center__token-status--valid' : 'config-center__token-status'}>
                 {config.hasToken ? 'Token 有效' : '尚未配置 Token'}
               </span>
+              <div className="config-field__quick-actions">
+                <a
+                  className="config-field__quick-link"
+                  href={GITHUB_TOKEN_SETTINGS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span>前往 GitHub 创建 Token</span>
+                  <ExternalLink aria-hidden="true" strokeWidth={1.8} />
+                </a>
+                <a
+                  className="config-field__quick-link config-field__quick-link--ghost"
+                  href={GITHUB_TOKEN_DOCS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span>查看配置说明</span>
+                  <ExternalLink aria-hidden="true" strokeWidth={1.8} />
+                </a>
+              </div>
             </label>
           </article>
 
           <article className="config-panel">
             <header className="config-panel__header">
               <div>
-                <p className="config-panel__eyebrow">Identity</p>
+                <p className="config-panel__eyebrow">身份</p>
                 <h2>作者身份配置</h2>
               </div>
             </header>
@@ -524,7 +606,7 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
           <article className="config-panel">
             <header className="config-panel__header">
               <div>
-                <p className="config-panel__eyebrow">Repositories</p>
+                <p className="config-panel__eyebrow">仓库</p>
                 <h2>仓库同步配置</h2>
               </div>
             </header>
@@ -557,7 +639,7 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
           <article className="config-panel">
             <header className="config-panel__header">
               <div>
-                <p className="config-panel__eyebrow">Logs</p>
+                <p className="config-panel__eyebrow">日志</p>
                 <h2>数据同步日志</h2>
               </div>
             </header>
@@ -594,48 +676,48 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
           <article className="config-panel">
             <header className="config-panel__header">
               <div>
-                <p className="config-panel__eyebrow">Strategy</p>
+                <p className="config-panel__eyebrow">同步</p>
                 <h2>同步策略配置</h2>
               </div>
             </header>
 
-            <label className="config-field">
-              <span className="config-field__label">同步周期（分钟）</span>
-              <input
-                type="number"
-                min={15}
-                max={1440}
-                step={15}
+            <div className="config-field">
+              <span className="config-field__label">同步周期</span>
+              <CompactSelect
+                ariaLabel="同步周期"
                 value={formState.syncIntervalMinutes}
-                onChange={(event) =>
+                options={syncIntervalOptions}
+                onChange={(value) =>
                   setFormState((current) => ({
                     ...current,
-                    syncIntervalMinutes: Number(event.target.value)
+                    syncIntervalMinutes: value
                   }))
                 }
               />
-              <small className="config-field__hint">系统按该周期自动拉取最新同步数据。</small>
-            </label>
+              <small className="config-select-meta">
+                {selectedSyncIntervalOption?.label ?? `${formState.syncIntervalMinutes} 分钟`} · {selectedSyncIntervalOption?.hint ?? '系统会按该节奏自动执行同步。'}
+              </small>
+              <small className="config-field__hint">保存后，系统会按照这里设定的周期自动同步。</small>
+            </div>
 
-            <label className="config-field">
-              <span className="config-field__label">默认展示时间范围</span>
-              <select
+            <div className="config-field">
+              <span className="config-field__label">默认时间范围</span>
+              <CompactSelect
+                ariaLabel="默认时间范围"
                 value={formState.defaultTimeRange}
-                onChange={(event) =>
+                options={TIME_RANGE_OPTIONS}
+                onChange={(value) =>
                   setFormState((current) => ({
                     ...current,
-                    defaultTimeRange: normalizeDefaultTimeRange(event.target.value)
+                    defaultTimeRange: value
                   }))
                 }
-              >
-                {TIME_RANGE_OPTIONS.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-              <small className="config-field__hint">页面首次进入时默认使用该统计范围。</small>
-            </label>
+              />
+              <small className="config-select-meta">
+                {selectedTimeRangeOption?.label ?? '最近 30 天'} · {selectedTimeRangeOption?.hint ?? '页面首次进入时会默认使用这个范围。'}
+              </small>
+              <small className="config-field__hint">各数据页面首次打开时，会默认带入这里设定的时间范围。</small>
+            </div>
 
             <div className="config-readonly">
               <span className="config-readonly__label">API 请求策略</span>
@@ -647,7 +729,7 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
           <article className="config-panel">
             <header className="config-panel__header">
               <div>
-                <p className="config-panel__eyebrow">Timezone</p>
+                <p className="config-panel__eyebrow">时区</p>
                 <h2>时区与时间配置</h2>
               </div>
             </header>
@@ -830,12 +912,285 @@ function HeaderIcon(props: { name: HeaderIconName }): ReactElement {
   return <Icon aria-hidden="true" strokeWidth={1.8} />;
 }
 
+function CompactSelect<TValue extends string | number>(props: CompactSelectProps<TValue>): ReactElement {
+  const { ariaLabel, value, options, onChange } = props;
+  const [open, setOpen] = useState<boolean>(false);
+  const [activeIndex, setActiveIndex] = useState<number>(0);
+  const [openDirection, setOpenDirection] = useState<'up' | 'down'>('down');
+  const [menuMaxHeight, setMenuMaxHeight] = useState<number>(320);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const listboxId = useId();
+
+  const selectedOption = useMemo<StrategyOption<TValue> | null>(() => {
+    return options.find((item) => item.value === value) ?? null;
+  }, [options, value]);
+
+  const selectedIndex = useMemo<number>(() => {
+    const index = options.findIndex((item) => item.value === value);
+    return index >= 0 ? index : 0;
+  }, [options, value]);
+
+  const closeMenu = (shouldFocusTrigger: boolean): void => {
+    setOpen(false);
+
+    if (shouldFocusTrigger) {
+      window.requestAnimationFrame(() => {
+        triggerRef.current?.focus();
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const updateMenuLayout = (): void => {
+      const rootElement = rootRef.current;
+
+      if (!rootElement) {
+        return;
+      }
+
+      const rect = rootElement.getBoundingClientRect();
+      const viewportPadding = 16;
+      const menuGap = 8;
+      const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+      const spaceAbove = rect.top - viewportPadding;
+      const shouldOpenUpward = spaceBelow < 220 && spaceAbove > spaceBelow;
+      const availableHeight = shouldOpenUpward ? spaceAbove - menuGap : spaceBelow - menuGap;
+
+      setOpenDirection(shouldOpenUpward ? 'up' : 'down');
+      setMenuMaxHeight(Math.max(144, Math.min(320, availableHeight)));
+    };
+
+    updateMenuLayout();
+
+    const handlePointerDown = (event: MouseEvent): void => {
+      if (!(event.target instanceof Node)) {
+        return;
+      }
+
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        closeMenu(true);
+      }
+    };
+
+    window.addEventListener('resize', updateMenuLayout);
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('resize', updateMenuLayout);
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setActiveIndex(selectedIndex);
+  }, [open, selectedIndex]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    optionRefs.current[activeIndex]?.focus();
+  }, [activeIndex, open]);
+
+  const openMenu = (nextIndex: number): void => {
+    setActiveIndex(nextIndex);
+    setOpen(true);
+  };
+
+  const selectOption = (index: number): void => {
+    const option = options[index];
+
+    if (!option) {
+      return;
+    }
+
+    onChange(option.value);
+    closeMenu(true);
+  };
+
+  const handleTriggerKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>): void => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      openMenu(selectedIndex);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      openMenu(selectedIndex);
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openMenu(selectedIndex);
+    }
+  };
+
+  const handleOptionKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number): void => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveIndex((index + 1) % options.length);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveIndex((index - 1 + options.length) % options.length);
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      setActiveIndex(0);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      setActiveIndex(options.length - 1);
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      selectOption(index);
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeMenu(true);
+    }
+  };
+
+  return (
+    <div
+      ref={rootRef}
+      className={
+        open
+          ? `config-select-shell config-select-shell--open config-select-shell--${openDirection}`
+          : 'config-select-shell'
+      }
+      onBlur={(event) => {
+        if (!open) {
+          return;
+        }
+
+        if (event.relatedTarget instanceof Node && rootRef.current?.contains(event.relatedTarget)) {
+          return;
+        }
+
+        setOpen(false);
+      }}
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        className="config-select-shell__trigger"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        onClick={() => {
+          if (open) {
+            closeMenu(false);
+            return;
+          }
+
+          openMenu(selectedIndex);
+        }}
+        onKeyDown={handleTriggerKeyDown}
+      >
+        <span className="config-select-shell__value">{selectedOption?.label ?? String(value)}</span>
+        <ChevronDown aria-hidden="true" strokeWidth={1.8} />
+      </button>
+
+      {open && (
+        <div
+          id={listboxId}
+          className="config-select-shell__menu"
+          role="listbox"
+          aria-label={ariaLabel}
+          style={{ maxHeight: `${menuMaxHeight}px` }}
+        >
+          {options.map((item, index) => {
+            const isActive = item.value === value;
+            const isFocused = index === activeIndex;
+
+            return (
+              <button
+                key={String(item.value)}
+                ref={(element) => {
+                  optionRefs.current[index] = element;
+                }}
+                type="button"
+                role="option"
+                aria-selected={isActive}
+                tabIndex={isFocused ? 0 : -1}
+                className={
+                  isActive
+                    ? 'config-select-shell__option config-select-shell__option--active'
+                    : 'config-select-shell__option'
+                }
+                onClick={() => selectOption(index)}
+                onKeyDown={(event) => handleOptionKeyDown(event, index)}
+                onMouseEnter={() => setActiveIndex(index)}
+              >
+                <span className="config-select-shell__option-label">{item.label}</span>
+                <small className="config-select-shell__option-hint">{item.hint}</small>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function normalizeDefaultTimeRange(value: string): ConfigPayload['defaultTimeRange'] {
   if (value === '90d' || value === '180d' || value === '365d') {
     return value;
   }
 
   return '30d';
+}
+
+/**
+ * 函数说明：将服务端配置转换为本地表单状态，统一首次回填与保存后的表单值。
+ * 参数说明：config 为当前用户配置，必填。
+ * 返回说明：返回配置页本地表单状态。
+ */
+function createFormStateFromConfig(config: ConfigView): ConfigFormState {
+  return {
+    githubUsername: config.githubUsername,
+    githubToken: '',
+    emailAliases: config.emailAliases,
+    emailAliasesText: config.emailAliases.join('\n'),
+    includePrivateRepos: config.includePrivateRepos,
+    syncIntervalMinutes: config.syncIntervalMinutes,
+    defaultTimeRange: normalizeDefaultTimeRange(config.defaultTimeRange),
+    timezone: config.timezone
+  };
 }
 
 function parseEmailAliases(value: string): string[] {

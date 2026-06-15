@@ -32,6 +32,11 @@ interface RequestOptions {
   body?: object;
 }
 
+interface ApiFailurePayload {
+  success?: false;
+  message?: string;
+}
+
 function buildUrl(path: string, query?: Record<string, QueryValue>): string {
   const url = new URL(`${apiBaseUrl}${path}`);
   const userId = useAppStore.getState().userId;
@@ -66,7 +71,24 @@ async function requestApi<T>(path: string, options?: RequestOptions): Promise<T>
         : undefined
   });
 
-  const payload = (await response.json()) as ApiResponse<T>;
+  const responseText = await response.text();
+
+  if (responseText.trim().length === 0) {
+    throw new Error(`接口返回空响应：${path}`);
+  }
+
+  let payload: ApiResponse<T>;
+
+  try {
+    payload = JSON.parse(responseText) as ApiResponse<T>;
+  } catch {
+    throw new Error(`接口返回了无效的 JSON：${path}`);
+  }
+
+  if (!response.ok) {
+    const failurePayload = payload as ApiFailurePayload;
+    throw new Error(failurePayload.message ?? `接口请求失败：${response.status}`);
+  }
 
   if (!payload.success) {
     throw new Error(payload.message);

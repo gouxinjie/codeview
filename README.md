@@ -238,6 +238,12 @@ GitHub 接口整理文档见：
 - 推送到阿里云 ACR
 - ECS 使用 Docker Compose 拉取镜像并启动
 
+生产环境配置建议放在固定共享路径：
+
+```text
+/var/www/codeview/shared/.env
+```
+
 如果宿主机 `80` 端口已被占用，可以通过 `CODEVIEW_HTTP_PORT` 改到其他端口，例如 `81`。此时需要同步把 `WEB_ORIGIN` 改成实际访问地址，例如：
 
 ```env
