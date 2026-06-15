@@ -1,8 +1,6 @@
 services:
   server:
-    build:
-      context: .
-      dockerfile: apps/server/Dockerfile
+    image: ${SERVER_IMAGE}
     container_name: codeview-server
     restart: unless-stopped
     environment:
@@ -18,13 +16,10 @@ services:
       - "3101"
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+    image: ${WEB_IMAGE}
     container_name: codeview-web
     restart: unless-stopped
     depends_on:
       - server
     ports:
       - "${CODEVIEW_HTTP_PORT:-80}:80"
-

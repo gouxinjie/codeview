@@ -20,6 +20,12 @@
 - `server`：Node.js 服务端，负责 API、SQLite 读写和定时同步
 - `web`：Nginx + 前端静态资源，负责页面访问和 `/api` 反向代理
 
+当前镜像来源：
+
+- GitHub Actions 构建镜像
+- 推送到阿里云 ACR
+- ECS 使用 Docker Compose 从 ACR 拉取镜像并启动
+
 ## ECS 需要提前准备的环境
 
 服务器需要提前安装：
@@ -53,6 +59,8 @@ deploy/codeview.env.example
 ```env
 CODEVIEW_HTTP_PORT=80
 CODEVIEW_DATA_DIR=/var/www/codeview/shared/data
+SERVER_IMAGE=crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com/codeview/server:latest
+WEB_IMAGE=crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com/codeview/web:latest
 SERVER_PORT=3101
 WEB_ORIGIN=http://你的域名或ECS公网IP
 DATABASE_PATH=/app/data/asset-console.db
@@ -64,6 +72,8 @@ ENCRYPTION_SECRET=替换成足够长的随机字符串
 
 - `CODEVIEW_HTTP_PORT`：宿主机对外端口
 - `CODEVIEW_DATA_DIR`：SQLite 数据库存放目录
+- `SERVER_IMAGE`：服务端镜像地址
+- `WEB_IMAGE`：前端镜像地址
 - `WEB_ORIGIN`：前端实际访问地址
 - `DATABASE_PATH`：容器内数据库路径
 - `ENCRYPTION_SECRET`：GitHub Token 加密密钥
@@ -76,6 +86,10 @@ ENCRYPTION_SECRET=替换成足够长的随机字符串
 - `ECS_PORT`
 - `ECS_USER`
 - `ECS_SSH_KEY`
+- `ACR_REGISTRY`
+- `ACR_NAMESPACE`
+- `ACR_USERNAME`
+- `ACR_PASSWORD`
 
 含义如下：
 
@@ -83,6 +97,10 @@ ENCRYPTION_SECRET=替换成足够长的随机字符串
 - `ECS_PORT`：SSH 端口，默认一般为 `22`
 - `ECS_USER`：登录 ECS 的用户名
 - `ECS_SSH_KEY`：对应私钥内容
+- `ACR_REGISTRY`：ACR 登录地址
+- `ACR_NAMESPACE`：ACR 命名空间，例如 `codeview`
+- `ACR_USERNAME`：ACR 登录用户名
+- `ACR_PASSWORD`：ACR 登录密码
 
 ## 部署流程
 
@@ -96,23 +114,27 @@ ENCRYPTION_SECRET=替换成足够长的随机字符串
 1. GitHub Actions 拉取仓库代码
 2. 执行 `npm ci`
 3. 执行 `npm run typecheck`
-4. 使用 `git archive` 打包当前提交
-5. 通过 SSH 上传压缩包到 ECS
-6. 在 ECS 创建发布目录 `/var/www/codeview/releases/<commit_sha>`
-7. 解压代码
-8. 使用 `docker compose` 重新构建并启动容器
+4. GitHub Actions 构建 `server` 和 `web` 镜像
+5. 将镜像推送到阿里云 ACR
+6. 使用 `git archive` 打包当前提交
+7. 通过 SSH 上传压缩包到 ECS
+8. 在 ECS 创建发布目录 `/var/www/codeview/releases/<commit_sha>`
+9. 解压代码
+10. ECS 登录 ACR
+11. 使用 `docker compose pull`
+12. 使用 `docker compose up -d`
 
 ## 容器运行说明
 
 ### 前端容器
 
-- 使用 `apps/web/Dockerfile` 构建
+- 镜像由 GitHub Actions 构建并推送到 ACR
 - 最终由 Nginx 提供静态页面
 - `/api` 请求会代理到 `server:3101`
 
 ### 后端容器
 
-- 使用 `apps/server/Dockerfile` 构建
+- 镜像由 GitHub Actions 构建并推送到 ACR
 - 运行命令为：
 
 ```text
