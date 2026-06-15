@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -15,6 +16,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   CircleAlert,
   Clock3,
   Lightbulb,
@@ -49,7 +51,7 @@ import {
 import { formatDate, formatDateTime, formatNumber, translateSyncStatus } from '@/utils/date';
 import './index.scss';
 
-type InsightRangeDays = 30 | 90;
+type InsightRangeDays = 30 | 90 | 180 | 365;
 type HeaderIconName = 'user' | 'clock' | 'success' | 'sync';
 type SummaryIconName = 'lightbulb' | 'focus' | 'up' | 'risk';
 type InsightTone = 'focus' | 'up' | 'risk';
@@ -140,6 +142,19 @@ interface InsightRepositoryItem extends RepoListItem {
   windowActiveDays: number;
 }
 
+interface InsightRangeOption {
+  value: InsightRangeDays;
+  label: string;
+  hint: string;
+}
+
+interface InsightRangeSelectProps {
+  label: string;
+  value: InsightRangeDays;
+  options: InsightRangeOption[];
+  onChange: (value: InsightRangeDays) => void;
+}
+
 const HEADER_ICON_MAP: Record<HeaderIconName, LucideIcon> = {
   user: User,
   clock: Clock3,
@@ -170,9 +185,16 @@ const SECTION_TABS: Array<{ key: InsightSectionKey; label: string }> = [
  * 是否必填：无。
  * 默认值：无。
  */
+const INSIGHT_RANGE_OPTIONS: InsightRangeOption[] = [
+  { value: 30, label: '近 30 天', hint: '适合看最近一轮活跃波动' },
+  { value: 90, label: '近 90 天', hint: '兼顾短期动作和阶段趋势' },
+  { value: 180, label: '近 180 天', hint: '更适合看半年的经营变化' },
+  { value: 365, label: '近 365 天', hint: '用于观察年度节奏和长期风险' }
+];
+
 function InsightCenterPage(): ReactElement {
-  const { config } = useAppStore();
-  const [rangeDays, setRangeDays] = useState<InsightRangeDays>(30);
+  const { config, configLoaded } = useAppStore();
+  const [rangeDays, setRangeDays] = useState<InsightRangeDays>(() => parseDefaultInsightRange(config?.defaultTimeRange));
   const [reloadSeed, setReloadSeed] = useState<number>(0);
   const [activeSection, setActiveSection] = useState<InsightSectionKey>('overview');
   const [snapshot, setSnapshot] = useState<InsightCenterSnapshot | null>(null);
@@ -184,6 +206,21 @@ function InsightCenterPage(): ReactElement {
   const operationRef = useRef<HTMLElement | null>(null);
   const riskRef = useRef<HTMLElement | null>(null);
   const suggestionRef = useRef<HTMLElement | null>(null);
+  const hasHydratedRangeRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!configLoaded) {
+      return;
+    }
+
+    const defaultRangeDays = parseDefaultInsightRange(config?.defaultTimeRange);
+    if (hasHydratedRangeRef.current) {
+      return;
+    }
+
+    setRangeDays(defaultRangeDays);
+    hasHydratedRangeRef.current = true;
+  }, [config?.defaultTimeRange, configLoaded]);
 
   useEffect(() => {
     let active = true;
@@ -192,7 +229,7 @@ function InsightCenterPage(): ReactElement {
       setLoading(true);
 
       try {
-        const stackMonths = rangeDays === 90 ? 12 : 6;
+        const stackMonths = getInsightStackMonths(rangeDays);
         const [overview, insights, repositories, statistics, stackAnalysis] = await Promise.all([
           fetchOverview(),
           fetchInsights(),
@@ -201,7 +238,7 @@ function InsightCenterPage(): ReactElement {
           fetchStackAnalysis({ months: stackMonths })
         ]);
         const repositoryActivityByRepo =
-          rangeDays === 90 ? await fetchRepositoryActivityByRepo(repositories) : {};
+          rangeDays > 30 ? await fetchRepositoryActivityByRepo(repositories) : {};
 
         const featuredRepoId = overview.featuredRepoId ?? repositories[0]?.id ?? null;
         let featuredRepo: RepoDetail | null = null;
@@ -210,7 +247,7 @@ function InsightCenterPage(): ReactElement {
 
         if (featuredRepoId !== null) {
           const featuredRepoDayActivity =
-            rangeDays === 90 ? repositoryActivityByRepo[featuredRepoId] : undefined;
+            rangeDays > 30 ? repositoryActivityByRepo[featuredRepoId] : undefined;
           const [nextFeaturedRepo, nextFeaturedRepoActivityWeek, nextFeaturedRepoActivityDay] = await Promise.all([
             fetchRepositoryDetail(featuredRepoId),
             fetchRepositoryActivity(featuredRepoId, 'week'),
@@ -400,7 +437,7 @@ function InsightCenterPage(): ReactElement {
     });
   }, [rangeDays, repositoryMetricsByRepo, snapshot]);
 
-  const rangeLabel = useMemo<string>(() => (rangeDays === 30 ? '近 30 天' : '近 90 天'), [rangeDays]);
+  const rangeLabel = useMemo<string>(() => getInsightRangeLabel(rangeDays), [rangeDays]);
 
   const featuredRepoRank = useMemo<number>(() => {
     if (!snapshot?.featuredRepo) {
@@ -411,8 +448,8 @@ function InsightCenterPage(): ReactElement {
   }, [repositoryRanking, snapshot?.featuredRepo]);
 
   const riskRepositories = useMemo<InsightRepositoryItem[]>(() => {
-    const minimumCommitCount = rangeDays === 90 ? 12 : 5;
-    const minimumActiveDays = rangeDays === 90 ? 9 : 3;
+    const minimumCommitCount = getRiskCommitThreshold(rangeDays);
+    const minimumActiveDays = getRiskActiveDayThreshold(rangeDays);
 
     return [...repositoryRanking]
       .filter((item) => item.windowCommitCount <= minimumCommitCount || item.windowActiveDays <= minimumActiveDays)
@@ -445,7 +482,7 @@ function InsightCenterPage(): ReactElement {
       return [];
     }
 
-    return rangeDays === 90 ? snapshot.featuredRepoActivityWeek : snapshot.featuredRepoActivityDay;
+    return rangeDays > 30 ? snapshot.featuredRepoActivityWeek : snapshot.featuredRepoActivityDay;
   }, [rangeDays, snapshot]);
 
   const insightDistribution = useMemo<InsightDistributionItem[]>(() => {
@@ -465,7 +502,7 @@ function InsightCenterPage(): ReactElement {
 
   const signalTrendSeries = useMemo(
     () =>
-      (snapshot?.statistics.trendDaily ?? []).slice(rangeDays === 90 ? -18 : -30).map((item) => ({
+      sliceTrendSeriesForRange(snapshot?.statistics.trendDaily ?? [], rangeDays).map((item) => ({
         label: item.date.slice(5),
         value: item.count
       })),
@@ -588,16 +625,12 @@ function InsightCenterPage(): ReactElement {
             <p>基于数据分析为你提供项目运营洞察与行动建议</p>
           </div>
           <div className="insight-center__hero-actions">
-            <label className="insight-center__range-control">
-              <span>时间范围</span>
-              <select
-                value={String(rangeDays)}
-                onChange={(event) => setRangeDays(Number(event.target.value) as InsightRangeDays)}
-              >
-                <option value="30">近 30 天</option>
-                <option value="90">近 90 天</option>
-              </select>
-            </label>
+            <InsightRangeSelect
+              label="时间范围"
+              value={rangeDays}
+              options={INSIGHT_RANGE_OPTIONS}
+              onChange={setRangeDays}
+            />
             <button type="button" className="insight-center__refresh" onClick={() => setReloadSeed((current) => current + 1)}>
               <RefreshCw aria-hidden="true" strokeWidth={1.8} />
               <span>刷新洞察</span>
@@ -750,7 +783,7 @@ function InsightCenterPage(): ReactElement {
                 summary={
                   topGrowthStacks.length > 0
                     ? '高增长技术栈已经开始在多个仓库复用，适合继续沉淀模板、脚手架和通用方案。'
-                    : '暂无高增长技术栈，建议继续观察近 90 天的变化。'
+                    : `暂无高增长技术栈，建议继续观察${rangeLabel}的变化。`
                 }
                 footer={<Link className="insight-story__link" to="/stack-analysis">查看技术栈详情</Link>}
               >
@@ -782,7 +815,7 @@ function InsightCenterPage(): ReactElement {
                 footer={<Link className="insight-story__link" to="/statistics">查看提交趋势</Link>}
               >
                 <div className="insight-story__mini-chart-caption">
-                  {rangeDays === 90 ? '近 90 天按周提交流量' : '近 30 天按日提交流量'}
+                  {rangeDays > 30 ? `${rangeLabel}按周提交流量` : `${rangeLabel}按日提交流量`}
                 </div>
                 <ReactECharts
                   option={buildRhythmOption(featuredRhythmSeries, rangeDays)}
@@ -950,6 +983,193 @@ function MetricChip(props: { label: string; value: string; meta: string }): Reac
   );
 }
 
+function InsightRangeSelect(props: InsightRangeSelectProps): ReactElement {
+  const { label, value, options, onChange } = props;
+  const [open, setOpen] = useState<boolean>(false);
+  const [activeIndex, setActiveIndex] = useState<number>(() => {
+    const initialIndex = options.findIndex((item) => item.value === value);
+    return initialIndex >= 0 ? initialIndex : 0;
+  });
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const listboxId = useId();
+  const selectedOption = options.find((item) => item.value === value) ?? options[0];
+  const selectedIndex = Math.max(
+    0,
+    options.findIndex((item) => item.value === value)
+  );
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent): void => {
+      if (!(event.target instanceof Node)) {
+        return;
+      }
+
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setActiveIndex(selectedIndex);
+    menuRef.current?.focus();
+  }, [open, selectedIndex]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    optionRefs.current[activeIndex]?.scrollIntoView({
+      block: 'nearest'
+    });
+  }, [activeIndex, open]);
+
+  const selectOption = (nextValue: InsightRangeDays): void => {
+    onChange(nextValue);
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  const moveActiveIndex = (direction: -1 | 1): void => {
+    setActiveIndex((current) => {
+      const nextIndex = current + direction;
+
+      if (nextIndex < 0) {
+        return options.length - 1;
+      }
+
+      if (nextIndex >= options.length) {
+        return 0;
+      }
+
+      return nextIndex;
+    });
+  };
+
+  return (
+    <div ref={rootRef} className="insight-range-select">
+      <span className="insight-range-select__label">{label}</span>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={open ? 'insight-range-select__trigger insight-range-select__trigger--open' : 'insight-range-select__trigger'}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-controls={listboxId}
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            setActiveIndex(selectedIndex);
+            setOpen(true);
+          }
+
+          if ((event.key === 'Enter' || event.key === ' ') && !open) {
+            event.preventDefault();
+            setActiveIndex(selectedIndex);
+            setOpen(true);
+          }
+        }}
+      >
+        <span className="insight-range-select__value-wrap">
+          <strong className="insight-range-select__value">{selectedOption?.label ?? ''}</strong>
+          <small className="insight-range-select__hint">{selectedOption?.hint ?? ''}</small>
+        </span>
+        <span className="insight-range-select__arrow" aria-hidden="true">
+          <ChevronDown strokeWidth={1.7} />
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          id={listboxId}
+          ref={menuRef}
+          className="insight-range-select__menu"
+          role="listbox"
+          tabIndex={-1}
+          aria-label={label}
+          aria-activedescendant={`${listboxId}-option-${activeIndex}`}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              moveActiveIndex(1);
+            }
+
+            if (event.key === 'ArrowUp') {
+              event.preventDefault();
+              moveActiveIndex(-1);
+            }
+
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              selectOption(options[activeIndex]?.value ?? value);
+            }
+
+            if (event.key === 'Tab') {
+              setOpen(false);
+            }
+          }}
+        >
+          {options.map((item, index) => (
+            <button
+              key={item.value}
+              ref={(node) => {
+                optionRefs.current[index] = node;
+              }}
+              id={`${listboxId}-option-${index}`}
+              type="button"
+              role="option"
+              aria-selected={item.value === value}
+              className={
+                index === activeIndex
+                  ? item.value === value
+                    ? 'insight-range-select__option insight-range-select__option--active insight-range-select__option--focused'
+                    : 'insight-range-select__option insight-range-select__option--focused'
+                  : item.value === value
+                    ? 'insight-range-select__option insight-range-select__option--active'
+                    : 'insight-range-select__option'
+              }
+              onMouseEnter={() => setActiveIndex(index)}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => selectOption(item.value)}
+            >
+              <span className="insight-range-select__option-title">{item.label}</span>
+              <small className="insight-range-select__option-hint">{item.hint}</small>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function normalizeInsightTone(level: string): InsightTone {
   if (level === 'risk') {
     return 'risk';
@@ -975,7 +1195,7 @@ function getStatisticsCardValue(statistics: StatisticsData, id: string): number 
 }
 
 /**
- * 拉取仓库按日活跃序列，用于在 90 天视图下重新计算真实窗口指标。
+ * 拉取仓库按日活跃序列，用于在大于 30 天的视图下重新计算真实窗口指标。
  */
 async function fetchRepositoryActivityByRepo(
   repositories: RepoListItem[]
@@ -1217,7 +1437,9 @@ function buildTechTrendOption(stackAnalysis: StackAnalysisData): EChartsOption {
 }
 
 function buildRhythmOption(data: RepoActivityPoint[], rangeDays: InsightRangeDays): EChartsOption {
-  const sliced = data.slice(rangeDays === 90 ? -12 : -14);
+  const sliced = data.slice(
+    rangeDays === 30 ? -14 : rangeDays === 90 ? -12 : rangeDays === 180 ? -16 : -20
+  );
 
   return {
     tooltip: {
@@ -1290,6 +1512,62 @@ function formatInsightShare(value: number, total: number): string {
 function getTrendSeriesColor(index: number): string {
   const colors = ['#c6e83a', '#5ab8ff', '#8f87ff'];
   return colors[index] ?? '#c6c9d2';
+}
+
+function parseDefaultInsightRange(defaultTimeRange: string | undefined): InsightRangeDays {
+  if (defaultTimeRange === '365d') {
+    return 365;
+  }
+
+  if (defaultTimeRange === '180d') {
+    return 180;
+  }
+
+  if (defaultTimeRange === '90d') {
+    return 90;
+  }
+
+  return 30;
+}
+
+function getInsightStackMonths(rangeDays: InsightRangeDays): 6 | 12 | 24 {
+  if (rangeDays === 365) {
+    return 24;
+  }
+
+  if (rangeDays === 90 || rangeDays === 180) {
+    return 12;
+  }
+
+  return 6;
+}
+
+function getInsightRangeLabel(rangeDays: InsightRangeDays): string {
+  return `近 ${formatNumber(rangeDays)} 天`;
+}
+
+function getRiskCommitThreshold(rangeDays: InsightRangeDays): number {
+  return Math.max(5, Math.round(rangeDays * 0.13));
+}
+
+function getRiskActiveDayThreshold(rangeDays: InsightRangeDays): number {
+  return Math.max(3, Math.round(rangeDays * 0.1));
+}
+
+function sliceTrendSeriesForRange(
+  trendDaily: Array<{ date: string; count: number }>,
+  rangeDays: InsightRangeDays
+): Array<{ date: string; count: number }> {
+  const maxPoints = rangeDays === 30 ? 30 : rangeDays === 90 ? 18 : rangeDays === 180 ? 24 : 30;
+
+  if (trendDaily.length <= maxPoints) {
+    return trendDaily;
+  }
+
+  const step = Math.max(1, Math.floor(trendDaily.length / maxPoints));
+  const sampled = trendDaily.filter((_, index) => index % step === 0);
+
+  return sampled.slice(-maxPoints);
 }
 
 export default InsightCenterPage;

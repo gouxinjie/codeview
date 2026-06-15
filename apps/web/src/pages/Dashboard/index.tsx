@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { EChartsOption } from 'echarts';
 import ReactECharts from 'echarts-for-react';
 import type { LucideIcon } from 'lucide-react';
@@ -45,6 +45,17 @@ type MetricIconName = 'repos' | 'commits' | 'active' | 'views' | 'clones';
 type HeaderIconName = 'user' | 'clock' | 'sync' | 'success' | 'github' | 'settings';
 type InsightLevel = 'focus' | 'up' | 'risk';
 type TrendGranularity = 'day' | 'week' | 'month';
+type ConfigModalStatus = 'closed' | 'open' | 'closing';
+
+const CONFIG_MODAL_EXIT_DELAY_MS = 260;
+const MODAL_FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])'
+].join(', ');
 
 interface LanguageDonutItem {
   name: string;
@@ -69,6 +80,20 @@ const METRIC_ICON_MAP: Record<MetricIconName, LucideIcon> = {
   clones: Copy
 };
 
+function getModalFocusableElements(container: HTMLElement | null): HTMLElement[] {
+  if (!container) {
+    return [];
+  }
+
+  return Array.from(container.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR)).filter((element) => {
+    if (element.getAttribute('aria-hidden') === 'true') {
+      return false;
+    }
+
+    return element.getClientRects().length > 0;
+  });
+}
+
 /**
  * 页面说明：首页 Dashboard。
  * Props 类型：无。
@@ -78,6 +103,9 @@ const METRIC_ICON_MAP: Record<MetricIconName, LucideIcon> = {
  */
 function DashboardPage(): JSX.Element {
   const { config, selectedRepoId, setSelectedRepoId } = useAppStore();
+  const configModalTitleId = useId();
+  const configModalRef = useRef<HTMLElement | null>(null);
+  const configModalLastActiveRef = useRef<HTMLElement | null>(null);
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [insights, setInsights] = useState<InsightCard[]>([]);
   const [featuredRepo, setFeaturedRepo] = useState<RepoDetail | null>(null);
@@ -88,7 +116,9 @@ function DashboardPage(): JSX.Element {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [actionError, setActionError] = useState<string>('');
-  const [configModalOpen, setConfigModalOpen] = useState<boolean>(false);
+  const [configModalStatus, setConfigModalStatus] = useState<ConfigModalStatus>('closed');
+  const configModalCloseTimerRef = useRef<number | null>(null);
+  const configModalVisible = configModalStatus !== 'closed';
 
   useEffect(() => {
     if (!config) {
@@ -96,9 +126,123 @@ function DashboardPage(): JSX.Element {
     }
 
     if (!config.githubUsername || !config.hasToken) {
-      setConfigModalOpen(true);
+      setConfigModalStatus('open');
     }
   }, [config]);
+
+  useEffect(() => {
+    return () => {
+      if (configModalCloseTimerRef.current !== null) {
+        window.clearTimeout(configModalCloseTimerRef.current);
+      }
+    };
+  }, []);
+
+  const openConfigQuickConfig = useCallback((event?: ReactMouseEvent<HTMLButtonElement>): void => {
+    if (configModalCloseTimerRef.current !== null) {
+      window.clearTimeout(configModalCloseTimerRef.current);
+      configModalCloseTimerRef.current = null;
+    }
+
+    if (event?.currentTarget) {
+      configModalLastActiveRef.current = event.currentTarget;
+    } else if (document.activeElement instanceof HTMLElement) {
+      configModalLastActiveRef.current = document.activeElement;
+    }
+
+    setConfigModalStatus('open');
+  }, []);
+
+  const closeConfigQuickConfig = useCallback((): void => {
+    if (configModalStatus === 'closed' || configModalStatus === 'closing') {
+      return;
+    }
+
+    if (configModalCloseTimerRef.current !== null) {
+      window.clearTimeout(configModalCloseTimerRef.current);
+    }
+
+    setConfigModalStatus('closing');
+    configModalCloseTimerRef.current = window.setTimeout(() => {
+      setConfigModalStatus('closed');
+      configModalCloseTimerRef.current = null;
+
+      if (configModalLastActiveRef.current?.isConnected) {
+        configModalLastActiveRef.current.focus();
+      }
+    }, CONFIG_MODAL_EXIT_DELAY_MS);
+  }, [configModalStatus]);
+
+  useEffect(() => {
+    if (!configModalVisible) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeConfigQuickConfig();
+        return;
+      }
+
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      const focusableElements = getModalFocusableElements(configModalRef.current);
+
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        configModalRef.current?.focus();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+      const focusInsideModal = activeElement instanceof Node && configModalRef.current?.contains(activeElement);
+
+      if (event.shiftKey) {
+        if (!focusInsideModal || activeElement === firstElement) {
+          event.preventDefault();
+          lastElement.focus();
+        }
+
+        return;
+      }
+
+      if (!focusInsideModal || activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [closeConfigQuickConfig, configModalVisible]);
+
+  useEffect(() => {
+    if (configModalStatus !== 'open') {
+      return;
+    }
+
+    const focusTimer = window.setTimeout(() => {
+      const focusableElements = getModalFocusableElements(configModalRef.current);
+      const nextFocusedElement = focusableElements[0] ?? configModalRef.current;
+      nextFocusedElement?.focus();
+    }, 32);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+    };
+  }, [configModalStatus]);
 
   useEffect(() => {
     let active = true;
@@ -222,14 +366,6 @@ function DashboardPage(): JSX.Element {
 
   const metricIcons: MetricIconName[] = ['repos', 'commits', 'active', 'views', 'clones'];
 
-  const openConfigQuickConfig = (): void => {
-    setConfigModalOpen(true);
-  };
-
-  const closeConfigQuickConfig = (): void => {
-    setConfigModalOpen(false);
-  };
-
   if (loading) {
     return <LoadingBlock text="正在加载 Dashboard" />;
   }
@@ -240,6 +376,7 @@ function DashboardPage(): JSX.Element {
 
   return (
     <div className="dashboard">
+      <div className="dashboard__shell" aria-hidden={configModalVisible}>
       <section className="dashboard__topbar">
         <TopInfoCell
           icon="user"
@@ -266,12 +403,12 @@ function DashboardPage(): JSX.Element {
           subValue={config?.includePrivateRepos ? '公开仓库 + 私有仓库' : '仅同步公开仓库'}
         />
         <div className="dashboard__topbar-actions">
-          <button className="dashboard__connect" onClick={openConfigQuickConfig}>
+          <button className="dashboard__connect" onClick={(event) => openConfigQuickConfig(event)}>
             <span className="dashboard__connect-dot" aria-hidden="true" />
             <HeaderIcon name="github" />
             <span>GitHub 连接</span>
           </button>
-          <button className="dashboard__gear" onClick={openConfigQuickConfig} aria-label="打开快捷配置">
+          <button className="dashboard__gear" onClick={(event) => openConfigQuickConfig(event)} aria-label="打开快捷配置">
             <HeaderIcon name="settings" />
           </button>
         </div>
@@ -576,16 +713,30 @@ function DashboardPage(): JSX.Element {
           ))}
         </section>
       </section>
+      </div>
 
-      {configModalOpen && (
+      {configModalVisible && (
         <div
-          className="dashboard-config-modal__backdrop"
+          className={
+            configModalStatus === 'closing'
+              ? 'dashboard-config-modal__backdrop dashboard-config-modal__backdrop--closing'
+              : 'dashboard-config-modal__backdrop dashboard-config-modal__backdrop--open'
+          }
           onClick={() => {
             closeConfigQuickConfig();
           }}
         >
           <section
-            className="dashboard-config-modal"
+            ref={configModalRef}
+            className={
+              configModalStatus === 'closing'
+                ? 'dashboard-config-modal dashboard-config-modal--closing'
+                : 'dashboard-config-modal dashboard-config-modal--open'
+            }
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={configModalTitleId}
+            tabIndex={-1}
             onClick={(event) => {
               event.stopPropagation();
             }}
@@ -593,13 +744,13 @@ function DashboardPage(): JSX.Element {
             <header className="dashboard-config-modal__header">
               <div className="dashboard-config-modal__copy">
                 <p className="dashboard-config-modal__eyebrow">Quick Config</p>
-                <h2 className="dashboard-config-modal__title">首页快捷配置</h2>
+                <h2 id={configModalTitleId} className="dashboard-config-modal__title">首页快捷配置</h2>
                 <p className="dashboard-config-modal__description">
                   此弹窗与配置中心使用同一套配置项、同一套保存逻辑和同一套说明文案。
                 </p>
               </div>
               <div className="dashboard-config-modal__actions">
-                <Link className="dashboard-config-modal__link" to="/config-center" onClick={() => setConfigModalOpen(false)}>
+                <Link className="dashboard-config-modal__link" to="/config-center" onClick={closeConfigQuickConfig}>
                   打开独立配置中心
                 </Link>
                 <button type="button" className="dashboard-config-modal__close" onClick={closeConfigQuickConfig}>

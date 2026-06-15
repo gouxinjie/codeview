@@ -23,7 +23,6 @@
 
 这篇文章记录的，就是 CodeView 从本地开发到阿里云 ECS 实际落地的一整套部署方案。
 
----
 
 ## 二、部署前的准备清单
 
@@ -59,7 +58,7 @@ Settings -> Secrets and variables -> Actions
 以当前项目为例，实际使用的是：
 
 ```text
-ACR_REGISTRY=crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com
+ACR_REGISTRY=crpi-********.cn-shanghai.personal.cr.aliyuncs.com
 ACR_NAMESPACE=codeview
 ```
 
@@ -76,7 +75,6 @@ ACR_NAMESPACE=codeview
 
 但在当前最终方案里，如果已经由宿主机 Nginx 反代 `127.0.0.1:81`，那外网层面其实不一定需要长期暴露 `81`。
 
----
 
 ## 三、这次部署想解决什么问题
 
@@ -98,7 +96,6 @@ ACR_NAMESPACE=codeview
 - 宿主机 Nginx 保持在 `80` 端口，对 CodeView 做反向代理
 - ECS 内只保留最近两个 release
 
----
 
 ## 四、为什么没有直接在 ECS 上执行 `docker compose up --build`
 
@@ -150,7 +147,6 @@ bind: address already in use
 
 这也意味着容器不能直接把 Web 服务绑定到宿主机 `80`，必须重新设计入口层。
 
----
 
 ## 五、最终采用的部署方案
 
@@ -183,7 +179,6 @@ flowchart TD
     K --> L["清理旧版本，仅保留最近 2 个 release"]
 ```
 
----
 
 ## 六、最终部署架构说明
 
@@ -223,14 +218,14 @@ ECS 上目录设计如下：
 最终线上访问使用的是二级域名：
 
 ```text
-codeview.gouxinjie.com
+codeview.example.com
 ```
 
 但容器没有直接占用宿主机 `80`，而是采用下面这套入口结构：
 
 ```mermaid
 flowchart LR
-    A["浏览器访问 codeview.gouxinjie.com"] --> B["宿主机 Nginx :80"]
+    A["浏览器访问 codeview.example.com"] --> B["宿主机 Nginx :80"]
     B --> C["CodeView web 容器 :81"]
     C --> D["容器内 Nginx 提供前端静态资源"]
     C --> E["/api 转发到 server:3101"]
@@ -246,7 +241,6 @@ flowchart LR
 
 这能避免和宿主机已有 Web 服务抢占 `80` 端口。
 
----
 
 ## 七、为什么生产环境变量放在 `shared/.env`
 
@@ -266,7 +260,6 @@ flowchart LR
 
 这也是为什么最终没有继续使用单独的 `codeview.env` 文件名，而是直接统一成 `.env`。这样和 Docker Compose 的习惯也一致。
 
----
 
 ## 八、生产环境的关键配置
 
@@ -286,15 +279,15 @@ GitHub Actions 需要以下 Secrets：
 以当前项目为例：
 
 ```text
-ACR_REGISTRY=crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com
+ACR_REGISTRY=crpi-********.cn-shanghai.personal.cr.aliyuncs.com
 ACR_NAMESPACE=codeview
 ```
 
 对应镜像地址为：
 
 ```text
-crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com/codeview/server:latest
-crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com/codeview/web:latest
+crpi-********.cn-shanghai.personal.cr.aliyuncs.com/codeview/server:latest
+crpi-********.cn-shanghai.personal.cr.aliyuncs.com/codeview/web:latest
 ```
 
 ### 2. ECS 共享环境文件
@@ -305,11 +298,11 @@ crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com/codeview/web:latest
 CODEVIEW_HTTP_PORT=81
 CODEVIEW_DATA_DIR=/var/www/codeview/shared/data
 
-SERVER_IMAGE=crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com/codeview/server:latest
-WEB_IMAGE=crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com/codeview/web:latest
+SERVER_IMAGE=crpi-********.cn-shanghai.personal.cr.aliyuncs.com/codeview/server:latest
+WEB_IMAGE=crpi-********.cn-shanghai.personal.cr.aliyuncs.com/codeview/web:latest
 
 SERVER_PORT=3101
-WEB_ORIGIN=http://codeview.gouxinjie.com
+WEB_ORIGIN=http://codeview.example.com
 DATABASE_PATH=/app/data/asset-console.db
 DEFAULT_USER_ID=local-user
 ENCRYPTION_SECRET=替换成足够长的随机字符串
@@ -334,16 +327,15 @@ CODEVIEW_HTTP_PORT=81
 当前实际接入域名后，应写成：
 
 ```env
-WEB_ORIGIN=http://codeview.gouxinjie.com
+WEB_ORIGIN=http://codeview.example.com
 ```
 
 如果没有走域名，而是直接通过公网 IP + `81` 访问，则应改成：
 
 ```env
-WEB_ORIGIN=http://47.101.33.206:81
+WEB_ORIGIN=http://***.***.***.***:81
 ```
 
----
 
 ## 九、GitHub 仓库里需要配置什么
 
@@ -380,7 +372,6 @@ GitHub Actions 至少需要下面这些 Secrets：
 - `ACR_REGISTRY` / `ACR_NAMESPACE` / `ACR_USERNAME` / `ACR_PASSWORD`
   用于让 GitHub Actions 能把镜像推送到阿里云 ACR，也让 ECS 能从 ACR 拉取镜像。
 
----
 
 ## 十、ECS 首次需要做哪些准备
 
@@ -425,7 +416,6 @@ sudo ss -lntp | grep ':81'
 
 如果 `80` 已被宿主机 Nginx 占用，这是正常现象，只要 `81` 没冲突即可。
 
----
 
 ## 十一、GitHub Actions 的实际部署逻辑
 
@@ -451,7 +441,6 @@ sudo ss -lntp | grep ':81'
 - ECS 只做稳定的拉取和运行；
 - 构建失败会集中发生在 GitHub Actions 上，更容易排查。
 
----
 
 ## 十二、部署时踩过的坑，以及为什么这样修
 
@@ -555,11 +544,10 @@ docker compose --project-name codeview --file /var/www/codeview/current/compose.
 - 版本快照要有，但不能无限堆积。
 - “当前版本 + 上一个版本”通常已经足够满足回滚需求。
 
----
 
 ## 十三、域名解析和宿主机 Nginx 还要做什么
 
-如果你要通过 `codeview.gouxinjie.com` 访问，而不是直接通过 `IP:81`，还需要补两步。
+如果你要通过 `codeview.example.com` 访问，而不是直接通过 `IP:81`，还需要补两步。
 
 ### 1. 配置 DNS 解析
 
@@ -568,10 +556,10 @@ docker compose --project-name codeview --file /var/www/codeview/current/compose.
 ```text
 主机记录：codeview
 记录类型：A
-记录值：47.101.33.206
+记录值：你的 ECS 公网 IP
 ```
 
-这样 `codeview.gouxinjie.com` 才会解析到 ECS。
+这样 `codeview.example.com` 才会解析到 ECS。
 
 ### 2. 配置宿主机 Nginx
 
@@ -582,7 +570,7 @@ docker compose --project-name codeview --file /var/www/codeview/current/compose.
 ```nginx
 server {
     listen 80;
-    server_name codeview.gouxinjie.com;
+    server_name codeview.example.com;
 
     location / {
         proxy_pass http://127.0.0.1:81;
@@ -605,7 +593,6 @@ server {
 - 容器内 `default.conf` 不需要手工拷贝；
 - 宿主机上的反向代理规则，需要按你的域名和服务器情况配置。
 
----
 
 ## 十四、宿主机 Nginx 配完后怎么生效
 
@@ -618,7 +605,6 @@ sudo systemctl reload nginx
 
 如果 `nginx -t` 失败，先不要 reload，先把语法错误修掉。
 
----
 
 ## 十五、如何验收部署是否成功
 
@@ -664,16 +650,15 @@ docker compose --project-name codeview --file /var/www/codeview/current/compose.
 如果走宿主机端口访问，可以先试：
 
 ```text
-http://47.101.33.206:81/
+http://***.***.***.***:81/
 ```
 
 接入域名并配置好宿主机 Nginx 后，再访问：
 
 ```text
-http://codeview.gouxinjie.com
+http://codeview.example.com
 ```
 
----
 
 ## 十六、出问题时如何回滚
 
@@ -711,7 +696,6 @@ docker compose --project-name codeview --file /var/www/codeview/current/compose.
 - 镜像 tag 仍然可拉取
 - 共享配置和数据目录没有被破坏
 
----
 
 ## 十七、手工运维时最常用的命令
 
@@ -746,7 +730,6 @@ ls -l /var/www/codeview/current
 ls -lt /var/www/codeview/releases
 ```
 
----
 
 ## 十八、这套方案适合什么项目
 
@@ -775,7 +758,6 @@ ls -lt /var/www/codeview/releases
 
 那时再考虑升级到 Kubernetes 或托管容器平台会更合适。
 
----
 
 ## 十九、结论
 

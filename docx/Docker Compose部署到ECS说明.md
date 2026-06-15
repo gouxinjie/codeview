@@ -60,8 +60,8 @@ deploy/.env.example
 ```env
 CODEVIEW_HTTP_PORT=80
 CODEVIEW_DATA_DIR=/var/www/codeview/shared/data
-SERVER_IMAGE=crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com/codeview/server:latest
-WEB_IMAGE=crpi-5ue84w8rjgqxg0s0.cn-shanghai.personal.cr.aliyuncs.com/codeview/web:latest
+SERVER_IMAGE=crpi-********.cn-shanghai.personal.cr.aliyuncs.com/codeview/server:latest
+WEB_IMAGE=crpi-********.cn-shanghai.personal.cr.aliyuncs.com/codeview/web:latest
 SERVER_PORT=3101
 WEB_ORIGIN=http://你的域名或ECS公网IP
 DATABASE_PATH=/app/data/asset-console.db

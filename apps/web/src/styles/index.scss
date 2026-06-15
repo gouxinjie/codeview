@@ -450,6 +450,16 @@ option {
   overflow-x: clip;
 }
 
+.app-shell__route-stage {
+  min-width: 0;
+  animation: app-shell-route-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top center;
+}
+
+.app-shell__route-stage > * {
+  min-width: 0;
+}
+
 .app-banner {
   margin: 8px 10px 0;
   padding: 12px 16px;
@@ -488,6 +498,22 @@ option {
 
 .mono {
   font-family: var(--font-mono);
+}
+
+@keyframes app-shell-route-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.986);
+  }
+
+  65% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 @media (min-width: 1081px) {
@@ -612,5 +638,11 @@ option {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__route-stage {
+    animation: none;
   }
 }

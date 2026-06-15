@@ -168,9 +168,11 @@ function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
 }
 
 function AppFrame(): ReactElement {
+  const location = useLocation();
   const { userId, setConfig, setConfigLoaded } = useAppStore();
   const [bootstrapError, setBootstrapError] = useState<string>('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const routeTransitionKey = `${location.pathname}${location.search}`;
 
   useEffect(() => {
     let active = true;
@@ -210,17 +212,19 @@ function AppFrame(): ReactElement {
         {bootstrapError && <div className="app-banner">{bootstrapError}</div>}
 
         <main className="app-shell__content">
-          <Suspense fallback={<LoadingBlock text="正在加载页面" />}>
-            <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/repos" element={<RepositoriesPage />} />
-              <Route path="/repos/:repoId" element={<RepositoryDetailPage />} />
-              <Route path="/stack-analysis" element={<StackAnalysisPage />} />
-              <Route path="/insights" element={<InsightCenterPage />} />
-              <Route path="/statistics" element={<StatisticsPage />} />
-              <Route path="/config-center" element={<ConfigCenterPage />} />
-            </Routes>
-          </Suspense>
+          <div key={routeTransitionKey} className="app-shell__route-stage">
+            <Suspense fallback={<LoadingBlock text="正在加载页面" />}>
+              <Routes location={location}>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/repos" element={<RepositoriesPage />} />
+                <Route path="/repos/:repoId" element={<RepositoryDetailPage />} />
+                <Route path="/stack-analysis" element={<StackAnalysisPage />} />
+                <Route path="/insights" element={<InsightCenterPage />} />
+                <Route path="/statistics" element={<StatisticsPage />} />
+                <Route path="/config-center" element={<ConfigCenterPage />} />
+              </Routes>
+            </Suspense>
+          </div>
         </main>
       </div>
 

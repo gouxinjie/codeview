@@ -1147,6 +1147,14 @@
   backdrop-filter: blur(12px);
 }
 
+.dashboard-config-modal__backdrop--open {
+  animation: dashboard-config-backdrop-enter 0.24s ease-out both;
+}
+
+.dashboard-config-modal__backdrop--closing {
+  animation: dashboard-config-backdrop-leave 0.24s ease-in both;
+}
+
 .dashboard-config-modal {
   width: min(1320px, calc(100vw - 36px));
   max-height: calc(100vh - 36px);
@@ -1163,6 +1171,16 @@
   box-shadow:
     0 18px 60px rgba(0, 0, 0, 0.36),
     inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transform-origin: center top;
+  will-change: transform, opacity, filter;
+}
+
+.dashboard-config-modal--open {
+  animation: dashboard-config-modal-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dashboard-config-modal--closing {
+  animation: dashboard-config-modal-leave 0.24s ease-in both;
 }
 
 .dashboard-config-modal__header {
@@ -1231,6 +1249,54 @@
   min-height: 0;
   padding-right: 2px;
   overflow: auto;
+}
+
+@keyframes dashboard-config-backdrop-enter {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes dashboard-config-backdrop-leave {
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes dashboard-config-modal-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0) scale(0.972);
+    filter: blur(12px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes dashboard-config-modal-leave {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0) scale(0.985);
+    filter: blur(10px);
+  }
 }
 
 @media (max-width: 1220px) {
@@ -1332,4 +1398,13 @@
     padding: 12px;
   }
 
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-config-modal__backdrop--open,
+  .dashboard-config-modal__backdrop--closing,
+  .dashboard-config-modal--open,
+  .dashboard-config-modal--closing {
+    animation: none;
+  }
 }
