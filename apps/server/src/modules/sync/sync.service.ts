@@ -61,8 +61,109 @@ interface SyncArguments {
   repoId?: number;
 }
 
+export interface SyncStatusView {
+  userId: string;
+  status: string;
+  message: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  scope: string | null;
+  progressTotal: number;
+  progressCompleted: number;
+  currentRepository: string | null;
+  updatedAt: string | null;
+}
+
+interface RunningSyncState extends SyncStatusView {
+  logId: number;
+}
+
+const runningSyncs = new Map<string, RunningSyncState>();
+
+function resolveSyncScope(args: SyncArguments): string {
+  return args.mode === 'single' && args.repoId ? `repo:${args.repoId}` : args.mode;
+}
+
+function buildRunningSyncStatus(state: RunningSyncState): SyncStatusView {
+  return {
+    userId: state.userId,
+    status: state.status,
+    message: state.message,
+    startedAt: state.startedAt,
+    finishedAt: state.finishedAt,
+    scope: state.scope,
+    progressTotal: state.progressTotal,
+    progressCompleted: state.progressCompleted,
+    currentRepository: state.currentRepository,
+    updatedAt: state.updatedAt
+  };
+}
+
+function updateRunningSync(userId: string, payload: Partial<Omit<RunningSyncState, 'userId' | 'logId'>>): void {
+  const current = runningSyncs.get(userId);
+
+  if (!current) {
+    return;
+  }
+
+  runningSyncs.set(userId, {
+    ...current,
+    ...payload,
+    updatedAt: payload.updatedAt ?? new Date().toISOString()
+  });
+}
+
+function createIdleSyncStatus(userId: string): SyncStatusView {
+  return {
+    userId,
+    status: 'idle',
+    message: '尚未开始同步',
+    startedAt: null,
+    finishedAt: null,
+    scope: null,
+    progressTotal: 0,
+    progressCompleted: 0,
+    currentRepository: null,
+    updatedAt: null
+  };
+}
+
+/* 校验同步前置配置，避免后台任务刚启动就立即失败。 */
+function assertSyncReady(userId: string): void {
+  const config = getConfig(userId);
+  const token = getDecryptedToken(userId);
+
+  if (!config.githubUsername || !token) {
+    throw new Error('请先完成 GitHub 用户名与 Token 配置');
+  }
+}
+
+/* 启动后台同步任务，接口会立即返回当前同步状态。 */
+export function startSyncGitHubData(args: SyncArguments): SyncStatusView {
+  const runningSync = runningSyncs.get(args.userId);
+
+  if (runningSync) {
+    return buildRunningSyncStatus(runningSync);
+  }
+
+  assertSyncReady(args.userId);
+
+  void syncGitHubData(args).catch((error: unknown) => {
+    logger.error('后台同步任务失败', {
+      userId: args.userId,
+      message: error instanceof Error ? error.message : '未知错误'
+    });
+  });
+
+  return getSyncStatus(args.userId);
+}
+
 /* 启动一次同步任务并记录日志，完成后触发所有聚合计算。 */
 export async function syncGitHubData(args: SyncArguments): Promise<void> {
+  if (runningSyncs.has(args.userId)) {
+    return;
+  }
+
   const config = getConfig(args.userId);
   const token = getDecryptedToken(args.userId);
 
@@ -71,28 +172,78 @@ export async function syncGitHubData(args: SyncArguments): Promise<void> {
   }
 
   const startedAt = new Date().toISOString();
-  const scope = args.mode === 'single' && args.repoId ? `repo:${args.repoId}` : args.mode;
+  const scope = resolveSyncScope(args);
+  const initialMessage = '正在准备同步任务';
 
   const syncLog = db
     .prepare(
       `
         INSERT INTO sync_logs (user_id, scope, status, message, started_at)
-        VALUES (?, ?, 'running', '同步进行中', ?)
+        VALUES (?, ?, 'running', ?, ?)
       `
     )
-    .run(args.userId, scope, startedAt);
+    .run(args.userId, scope, initialMessage, startedAt);
+
+  runningSyncs.set(args.userId, {
+    userId: args.userId,
+    logId: Number(syncLog.lastInsertRowid),
+    status: 'running',
+    message: initialMessage,
+    startedAt,
+    finishedAt: null,
+    scope,
+    progressTotal: 0,
+    progressCompleted: 0,
+    currentRepository: null,
+    updatedAt: startedAt
+  });
 
   try {
     const githubUser = await fetchGitHubUser(token);
     const repositories = await resolveRepositories(args, token, config.includePrivateRepos);
+    const repositoryCount = repositories.length;
 
-    for (const repository of repositories) {
+    updateRunningSync(args.userId, {
+      message: repositoryCount > 0 ? `待同步 ${repositoryCount} 个仓库` : '未发现可同步的仓库',
+      progressTotal: repositoryCount,
+      progressCompleted: 0,
+      currentRepository: null
+    });
+
+    for (const [index, repository] of repositories.entries()) {
+      updateRunningSync(args.userId, {
+        message: `正在同步 ${index + 1}/${repositoryCount}：${repository.full_name}`,
+        progressTotal: repositoryCount,
+        progressCompleted: index,
+        currentRepository: repository.full_name
+      });
+
       await syncRepository(args.userId, token, githubUser.login, repository, args.mode);
+
+      updateRunningSync(args.userId, {
+        message:
+          index + 1 >= repositoryCount
+            ? '仓库数据已拉取完成，正在汇总统计'
+            : `已完成 ${index + 1}/${repositoryCount}，准备继续下一个仓库`,
+        progressTotal: repositoryCount,
+        progressCompleted: index + 1,
+        currentRepository: index + 1 >= repositoryCount ? null : repository.full_name
+      });
     }
+
+    updateRunningSync(args.userId, {
+      message: repositoryCount > 0 ? '正在生成统计结果' : '正在刷新统计结果',
+      progressTotal: repositoryCount,
+      progressCompleted: repositoryCount,
+      currentRepository: null
+    });
 
     recomputeAllAnalytics(args.userId, config.timezone || DEFAULT_TIMEZONE);
 
     const finishedAt = new Date().toISOString();
+    const successMessage =
+      repositoryCount > 0 ? `已完成 ${repositoryCount} 个仓库同步` : '同步完成，当前没有可同步仓库';
+
     updateLastSyncedAt(args.userId, finishedAt);
 
     db.prepare(
@@ -101,7 +252,7 @@ export async function syncGitHubData(args: SyncArguments): Promise<void> {
         SET status = 'success', message = ?, finished_at = ?
         WHERE id = ?
       `
-    ).run(`完成 ${repositories.length} 个仓库同步`, finishedAt, syncLog.lastInsertRowid);
+    ).run(successMessage, finishedAt, Number(syncLog.lastInsertRowid));
   } catch (error) {
     const finishedAt = new Date().toISOString();
     const message = error instanceof Error ? error.message : '同步失败';
@@ -114,9 +265,11 @@ export async function syncGitHubData(args: SyncArguments): Promise<void> {
         SET status = 'failed', message = ?, finished_at = ?
         WHERE id = ?
       `
-    ).run(message, finishedAt, syncLog.lastInsertRowid);
+    ).run(message, finishedAt, Number(syncLog.lastInsertRowid));
 
     throw error;
+  } finally {
+    runningSyncs.delete(args.userId);
   }
 }
 
@@ -975,17 +1128,17 @@ function recomputeAllAnalytics(userId: string, timezone: string): void {
   generateInsightCards(userId);
 }
 
-export function getSyncStatus(userId: string): {
-  userId: string;
-  status: string;
-  message: string;
-  startedAt: string | null;
-  finishedAt: string | null;
-} {
+export function getSyncStatus(userId: string): SyncStatusView {
+  const runningSync = runningSyncs.get(userId);
+
+  if (runningSync) {
+    return buildRunningSyncStatus(runningSync);
+  }
+
   const row = db
     .prepare(
       `
-        SELECT status, message, started_at, finished_at
+        SELECT scope, status, message, started_at, finished_at
         FROM sync_logs
         WHERE user_id = ?
         ORDER BY id DESC
@@ -994,6 +1147,7 @@ export function getSyncStatus(userId: string): {
     )
     .get(userId) as
     | {
+        scope: string;
         status: string;
         message: string;
         started_at: string | null;
@@ -1001,12 +1155,21 @@ export function getSyncStatus(userId: string): {
       }
     | undefined;
 
+  if (!row) {
+    return createIdleSyncStatus(userId);
+  }
+
   return {
     userId,
-    status: row?.status ?? 'idle',
-    message: row?.message ?? '尚未开始同步',
-    startedAt: row?.started_at ?? null,
-    finishedAt: row?.finished_at ?? null
+    status: row.status,
+    message: row.message,
+    startedAt: row.started_at,
+    finishedAt: row.finished_at,
+    scope: row.scope,
+    progressTotal: 0,
+    progressCompleted: 0,
+    currentRepository: null,
+    updatedAt: row.finished_at ?? row.started_at
   };
 }
 

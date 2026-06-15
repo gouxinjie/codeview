@@ -1,0 +1,171 @@
+/* 文件说明：全局同步遮罩样式。 */
+/* 样式说明：覆盖整个页面，展示同步状态、当前时间和仓库进度。 */
+/* 关键布局说明：使用固定定位和双层面板结构，保证移动端和桌面端都能稳定显示。 */
+
+.global-sync-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top, rgba(184, 255, 59, 0.12), transparent 36%),
+    rgba(3, 6, 8, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.global-sync-overlay__panel {
+  width: min(620px, 100%);
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid rgba(184, 255, 59, 0.18);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(184, 255, 59, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(7, 11, 13, 0.96);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(184, 255, 59, 0.08) inset;
+}
+
+.global-sync-overlay__panel--success {
+  border-color: rgba(99, 220, 143, 0.32);
+}
+
+.global-sync-overlay__panel--failed {
+  border-color: rgba(255, 138, 101, 0.32);
+}
+
+.global-sync-overlay__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.global-sync-overlay__title {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.global-sync-overlay__title svg {
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  color: var(--color-accent);
+}
+
+.global-sync-overlay__panel--failed .global-sync-overlay__title svg {
+  color: #ff8a65;
+}
+
+.global-sync-overlay__panel--success .global-sync-overlay__title svg {
+  color: #63dc8f;
+}
+
+.global-sync-overlay__title strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1.2rem;
+}
+
+.global-sync-overlay__title span,
+.global-sync-overlay__clock,
+.global-sync-overlay__progress-meta,
+.global-sync-overlay__info-card span,
+.global-sync-overlay__repo span {
+  color: var(--color-text-secondary);
+}
+
+.global-sync-overlay__clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  white-space: nowrap;
+}
+
+.global-sync-overlay__clock svg {
+  width: 16px;
+  height: 16px;
+}
+
+.global-sync-overlay__progress {
+  display: grid;
+  gap: 10px;
+}
+
+.global-sync-overlay__progress-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.global-sync-overlay__progress-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #d7ff6a, #86c82a);
+  transition: width 0.25s ease;
+}
+
+.global-sync-overlay__progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 0.88rem;
+}
+
+.global-sync-overlay__info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.global-sync-overlay__info-card,
+.global-sync-overlay__repo {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.global-sync-overlay__info-card strong,
+.global-sync-overlay__repo strong {
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .global-sync-overlay {
+    padding: 16px;
+  }
+
+  .global-sync-overlay__panel {
+    padding: 18px;
+    gap: 16px;
+  }
+
+  .global-sync-overlay__header {
+    flex-direction: column;
+  }
+
+  .global-sync-overlay__clock {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .global-sync-overlay__info-grid {
+    grid-template-columns: 1fr;
+  }
+}

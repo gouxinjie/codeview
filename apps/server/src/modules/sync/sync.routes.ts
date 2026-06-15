@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '@/utils/http';
 import { validateCsrfToken } from '@/modules/config/config.service';
-import { getSyncStatus, syncGitHubData } from '@/modules/sync/sync.service';
+import { getSyncStatus, startSyncGitHubData } from '@/modules/sync/sync.service';
+import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '@/utils/http';
 
 const syncBodySchema = z.object({
   userId: z.string().min(1)
@@ -10,18 +10,22 @@ const syncBodySchema = z.object({
 
 export const syncRouter = Router();
 
+/* 统一校验 CSRF，避免同步接口被跨站请求滥用。 */
+function validateSyncRequest(userId: string, csrfToken: string | undefined): boolean {
+  return validateCsrfToken(userId, csrfToken);
+}
+
 syncRouter.post(
   '/sync/full',
   createRouteHandler(async (request, response) => {
     const payload = syncBodySchema.parse(request.body);
 
-    if (!validateCsrfToken(payload.userId, request.header('x-csrf-token'))) {
+    if (!validateSyncRequest(payload.userId, request.header('x-csrf-token'))) {
       sendFailure(response, 403, 'INVALID_CSRF_TOKEN', 'CSRF 令牌校验失败');
       return;
     }
 
-    await syncGitHubData({ userId: payload.userId, mode: 'full' });
-    sendSuccess(response, getSyncStatus(payload.userId));
+    sendSuccess(response, startSyncGitHubData({ userId: payload.userId, mode: 'full' }));
   })
 );
 
@@ -30,13 +34,12 @@ syncRouter.post(
   createRouteHandler(async (request, response) => {
     const payload = syncBodySchema.parse(request.body);
 
-    if (!validateCsrfToken(payload.userId, request.header('x-csrf-token'))) {
+    if (!validateSyncRequest(payload.userId, request.header('x-csrf-token'))) {
       sendFailure(response, 403, 'INVALID_CSRF_TOKEN', 'CSRF 令牌校验失败');
       return;
     }
 
-    await syncGitHubData({ userId: payload.userId, mode: 'incremental' });
-    sendSuccess(response, getSyncStatus(payload.userId));
+    sendSuccess(response, startSyncGitHubData({ userId: payload.userId, mode: 'incremental' }));
   })
 );
 
@@ -46,7 +49,7 @@ syncRouter.post(
     const payload = syncBodySchema.parse(request.body);
     const repoId = Number(request.params.id);
 
-    if (!validateCsrfToken(payload.userId, request.header('x-csrf-token'))) {
+    if (!validateSyncRequest(payload.userId, request.header('x-csrf-token'))) {
       sendFailure(response, 403, 'INVALID_CSRF_TOKEN', 'CSRF 令牌校验失败');
       return;
     }
@@ -56,8 +59,7 @@ syncRouter.post(
       return;
     }
 
-    await syncGitHubData({ userId: payload.userId, mode: 'single', repoId });
-    sendSuccess(response, getSyncStatus(payload.userId));
+    sendSuccess(response, startSyncGitHubData({ userId: payload.userId, mode: 'single', repoId }));
   })
 );
 

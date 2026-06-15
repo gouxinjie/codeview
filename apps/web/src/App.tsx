@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, type ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { AlertCircle, BarChart3, Boxes, FileText, FolderOpen, LayoutGrid, Settings2 } from 'lucide-react';
 import { BrowserRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { GlobalSyncOverlay } from '@/components/commons/GlobalSyncOverlay';
 import { LoadingBlock } from '@/components/commons/LoadingBlock';
 import { useAppStore } from '@/store/appStore';
 import { fetchConfig } from '@/utils/api';
@@ -222,6 +223,8 @@ function AppFrame(): ReactElement {
           </Suspense>
         </main>
       </div>
+
+      <GlobalSyncOverlay />
     </div>
   );
 }

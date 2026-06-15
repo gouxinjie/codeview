@@ -162,9 +162,16 @@ const INITIAL_FORM_STATE: ConfigFormState = {
  */
 export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
   const { variant = 'page' } = props;
-  const { config, configLoaded, setConfig } = useAppStore();
+  const {
+    config,
+    configLoaded,
+    setConfig,
+    syncStatus,
+    setSyncStatus,
+    setSyncOverlayVisible,
+    setSyncStarting
+  } = useAppStore();
   const [formState, setFormState] = useState<ConfigFormState>(INITIAL_FORM_STATE);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [actionError, setActionError] = useState<string>('');
@@ -174,6 +181,8 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
   const [currentTime, setCurrentTime] = useState<string>(new Date().toISOString());
   const [localSyncLogs, setLocalSyncLogs] = useState<LocalSyncLogEntry[]>([]);
   const hasHydratedFormRef = useRef<boolean>(false);
+  const lastTriggeredModeRef = useRef<Exclude<ConfigActionMode, 'save'> | null>(null);
+  const lastCompletedSyncKeyRef = useRef<string>('');
 
   const configFormState = useMemo<ConfigFormState | null>(() => {
     if (!config) {
@@ -258,6 +267,43 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
       window.clearInterval(timer);
     };
   }, []);
+
+  useEffect(() => {
+    if (!syncStatus || !lastTriggeredModeRef.current || syncStatus.status === 'running') {
+      return;
+    }
+
+    const syncMode = lastTriggeredModeRef.current;
+    const completionKey = `${syncStatus.status}:${syncStatus.finishedAt ?? syncStatus.startedAt ?? ''}:${syncStatus.message}`;
+
+    if (lastCompletedSyncKeyRef.current === completionKey) {
+      return;
+    }
+
+    lastCompletedSyncKeyRef.current = completionKey;
+
+    setLocalSyncLogs((current) => [
+      {
+        id: `${syncMode}-${syncStatus.finishedAt ?? syncStatus.startedAt ?? new Date().toISOString()}`,
+        mode: syncMode,
+        status: syncStatus.status,
+        message: syncStatus.message,
+        startedAt: syncStatus.startedAt,
+        finishedAt: syncStatus.finishedAt
+      },
+      ...current
+    ].slice(0, 4));
+
+    if (syncStatus.status === 'success') {
+      setActionError('');
+      setActionSuccess(syncMode === 'full' ? '全量同步已完成' : '增量同步已完成');
+    } else if (syncStatus.status === 'failed') {
+      setActionSuccess('');
+      setActionError(syncStatus.message || '同步失败');
+    }
+
+    lastTriggeredModeRef.current = null;
+  }, [syncStatus]);
 
   useEffect(() => {
     if (!configLoaded) {
@@ -379,29 +425,39 @@ export function ConfigWorkbench(props: ConfigWorkbenchProps): ReactElement {
   };
 
   const runSyncHandler = async (mode: Exclude<ConfigActionMode, 'save'>): Promise<void> => {
+    if (!config) {
+      setActionError('配置尚未加载完成');
+      return;
+    }
+
     setActionLoading(true);
     setActionError('');
     setActionSuccess('');
+    lastTriggeredModeRef.current = mode;
+    setSyncOverlayVisible(true);
+    setSyncStarting(true);
+    setSyncStatus({
+      userId: config.userId,
+      status: 'running',
+      message: mode === 'full' ? '正在启动全量同步' : '正在启动增量同步',
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      scope: mode,
+      progressTotal: 0,
+      progressCompleted: 0,
+      currentRepository: null,
+      updatedAt: new Date().toISOString()
+    });
 
     try {
       const result = mode === 'full' ? await triggerFullSync() : await triggerIncrementalSync();
-      const latestConfig = await fetchConfig();
-
-      setConfig(latestConfig);
       setSyncStatus(result);
-      setLocalSyncLogs((current) => [
-        {
-          id: `${mode}-${result.finishedAt ?? result.startedAt ?? new Date().toISOString()}`,
-          mode,
-          status: result.status,
-          message: result.message,
-          startedAt: result.startedAt,
-          finishedAt: result.finishedAt
-        },
-        ...current
-      ].slice(0, 4));
-      setActionSuccess(mode === 'full' ? '全量同步已完成。' : '增量同步已完成。');
+      setSyncStarting(false);
+      setActionSuccess(mode === 'full' ? '已开始全量同步' : '已开始增量同步');
     } catch (requestError) {
+      lastTriggeredModeRef.current = null;
+      setSyncStarting(false);
+      setSyncOverlayVisible(false);
       setActionError(requestError instanceof Error ? requestError.message : '同步失败');
     } finally {
       setActionLoading(false);

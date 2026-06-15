@@ -44,6 +44,11 @@ export interface SyncStatus {
   message: string;
   startedAt: string | null;
   finishedAt: string | null;
+  scope: string | null;
+  progressTotal: number;
+  progressCompleted: number;
+  currentRepository: string | null;
+  updatedAt: string | null;
 }
 
 export interface OverviewKpi {
