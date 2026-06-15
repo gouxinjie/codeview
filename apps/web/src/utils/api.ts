@@ -20,7 +20,7 @@ import type {
 const defaultApiBaseUrl =
   typeof window === 'undefined'
     ? 'http://localhost:3101/api'
-    : `${window.location.protocol}//${window.location.hostname}:3101/api`;
+    : `${window.location.origin}/api`;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? defaultApiBaseUrl;
 

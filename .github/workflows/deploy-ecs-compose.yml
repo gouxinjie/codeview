@@ -1,0 +1,74 @@
+name: Deploy To ECS With Docker Compose
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Package release bundle
+        run: git archive --format=tar.gz --output "codeview-${GITHUB_SHA}.tar.gz" HEAD
+
+      - name: Prepare SSH key
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.ECS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.ECS_PORT }}" "${{ secrets.ECS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload release bundle
+        run: |
+          scp -P "${{ secrets.ECS_PORT }}" \
+            "codeview-${GITHUB_SHA}.tar.gz" \
+            "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/codeview-${GITHUB_SHA}.tar.gz"
+
+      - name: Deploy on ECS
+        run: |
+          ssh -p "${{ secrets.ECS_PORT }}" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" <<EOF
+          set -e
+          BASE_DIR="/var/www/codeview"
+          RELEASE_DIR="\$BASE_DIR/releases/${GITHUB_SHA}"
+          SHARED_DIR="\$BASE_DIR/shared"
+          mkdir -p "\$RELEASE_DIR" "\$SHARED_DIR/data"
+          tar -xzf "/tmp/codeview-${GITHUB_SHA}.tar.gz" -C "\$RELEASE_DIR"
+          docker compose \
+            --project-name codeview \
+            --file "\$RELEASE_DIR/compose.yaml" \
+            --env-file "\$SHARED_DIR/codeview.env" \
+            up -d --build
+          EOF
