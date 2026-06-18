@@ -1,4 +1,4 @@
-import { subDays } from 'date-fns';
+import { subDays, subMinutes } from 'date-fns';
 import { db } from '@/database/client';
 import { getConfig, getDecryptedToken, updateLastSyncedAt } from '@/modules/config/config.service';
 import { logger } from '@/utils/logger';
@@ -19,6 +19,11 @@ type SyncMode = 'full' | 'incremental' | 'single';
 
 interface RepoIdRow {
   id: number;
+}
+
+interface LocalRepoRow extends RepoIdRow {
+  github_repo_id: number;
+  is_private: number;
 }
 
 interface RepoSummaryRow {
@@ -55,6 +60,24 @@ interface StackTagRecord {
   source: string;
 }
 
+interface ExistingCommitRow {
+  sha: string;
+}
+
+interface PreparedCommitRecord {
+  userId: string;
+  repoId: number;
+  sha: string;
+  authorLogin: string;
+  authorName: string;
+  authorEmail: string;
+  canonicalAuthorId: string;
+  commitTime: string;
+  message: string;
+  isMergeCommit: number;
+  isBot: number;
+}
+
 interface SyncArguments {
   userId: string;
   mode: SyncMode;
@@ -77,6 +100,10 @@ export interface SyncStatusView {
 interface RunningSyncState extends SyncStatusView {
   logId: number;
 }
+
+const INCREMENTAL_COMMIT_LOOKBACK_DAYS = 1;
+const INCREMENTAL_COMMIT_MAX_WINDOW_DAYS = 90;
+const INCREMENTAL_COMMIT_BOUNDARY_BUFFER_MINUTES = 5;
 
 const runningSyncs = new Map<string, RunningSyncState>();
 
@@ -111,6 +138,188 @@ function updateRunningSync(userId: string, payload: Partial<Omit<RunningSyncStat
     ...payload,
     updatedAt: payload.updatedAt ?? new Date().toISOString()
   });
+}
+
+/* 仅在全量同步后清理公开仓库，避免私有仓库因权限或配置波动被误删。 */
+function removeStaleRepositories(userId: string, repositories: GitHubRepoResponse[]): number {
+  const localRepositories = db
+    .prepare('SELECT id, github_repo_id, is_private FROM repos WHERE user_id = ?')
+    .all(userId) as LocalRepoRow[];
+  const remoteRepositoryIds = new Set<number>(repositories.map((item) => item.id));
+  const staleRepositories = localRepositories.filter(
+    (item) => item.is_private === 0 && !remoteRepositoryIds.has(item.github_repo_id)
+  );
+
+  if (staleRepositories.length === 0) {
+    return 0;
+  }
+
+  const deleteStatement = db.prepare('DELETE FROM repos WHERE user_id = ? AND id = ?');
+
+  db.transaction(() => {
+    for (const repository of staleRepositories) {
+      deleteStatement.run(userId, repository.id);
+    }
+  })();
+
+  return staleRepositories.length;
+}
+
+/* 为增量同步保留重叠时间窗口，兼顾新增提交抓取与近期历史改写修正。 */
+function resolveCommitSyncSince(latestCommitTime: string | null, mode: SyncMode): string | undefined {
+  if (mode === 'full') {
+    return undefined;
+  }
+
+  const minimumSince = subDays(new Date(), INCREMENTAL_COMMIT_MAX_WINDOW_DAYS).toISOString();
+
+  if (!latestCommitTime) {
+    return minimumSince;
+  }
+
+  const latestCommitWithBuffer = subMinutes(
+    new Date(latestCommitTime),
+    INCREMENTAL_COMMIT_BOUNDARY_BUFFER_MINUTES
+  );
+  const lookbackSince = subDays(latestCommitWithBuffer, INCREMENTAL_COMMIT_LOOKBACK_DAYS).toISOString();
+  return lookbackSince > minimumSince ? lookbackSince : minimumSince;
+}
+
+/* 统一整理提交记录，避免库写入阶段再重复做字段清洗与身份归一化。 */
+function prepareCommitRecords(
+  userId: string,
+  repoId: number,
+  githubUsername: string,
+  emailAliases: string[],
+  commits: Awaited<ReturnType<typeof fetchRepoCommits>>
+): PreparedCommitRecord[] {
+  const normalizedAliases = emailAliases.map((item) => escapeHtml(item.toLowerCase()));
+
+  return commits.flatMap<PreparedCommitRecord>((item) => {
+    const authorLogin = escapeHtml(item.author?.login ?? '');
+    const authorName = escapeHtml(item.commit.author?.name ?? '');
+    const authorEmail = escapeHtml((item.commit.author?.email ?? '').toLowerCase());
+    const commitTime = item.commit.author?.date;
+
+    if (!commitTime) {
+      return [];
+    }
+
+    const canonicalAuthorId = resolveCanonicalAuthorId(
+      userId,
+      githubUsername,
+      normalizedAliases,
+      authorLogin,
+      authorEmail
+    );
+    const isBot =
+      authorLogin.endsWith('[bot]') ||
+      authorEmail.includes('bot') ||
+      authorName.toLowerCase().includes('bot');
+    const isMergeCommit =
+      item.parents.length > 1 || item.commit.message.toLowerCase().startsWith('merge ');
+
+    return [
+      {
+        userId,
+        repoId,
+        sha: item.sha,
+        authorLogin,
+        authorName,
+        authorEmail,
+        canonicalAuthorId,
+        commitTime,
+        message: escapeHtml(item.commit.message),
+        isMergeCommit: isMergeCommit ? 1 : 0,
+        isBot: isBot ? 1 : 0
+      }
+    ];
+  });
+}
+
+/* 全量同步覆盖整仓库提交历史，增量同步则在重叠窗口内清理已失效提交。 */
+function persistRepositoryCommits(
+  repoId: number,
+  mode: SyncMode,
+  since: string | undefined,
+  commits: PreparedCommitRecord[]
+): void {
+  const insertStatement = db.prepare(
+    `
+      INSERT INTO commits (
+        user_id,
+        repo_id,
+        sha,
+        author_login,
+        author_name,
+        author_email,
+        canonical_author_id,
+        commit_time,
+        message,
+        is_merge_commit,
+        is_bot
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(repo_id, sha) DO UPDATE SET
+        user_id = excluded.user_id,
+        author_login = excluded.author_login,
+        author_name = excluded.author_name,
+        author_email = excluded.author_email,
+        canonical_author_id = excluded.canonical_author_id,
+        commit_time = excluded.commit_time,
+        message = excluded.message,
+        is_merge_commit = excluded.is_merge_commit,
+        is_bot = excluded.is_bot
+    `
+  );
+  const deleteAllStatement = db.prepare('DELETE FROM commits WHERE repo_id = ?');
+  const selectRecentStatement = db.prepare(
+    `
+      SELECT sha
+      FROM commits
+      WHERE repo_id = ? AND commit_time >= ?
+    `
+  );
+  const deleteRecentStatement = db.prepare('DELETE FROM commits WHERE repo_id = ? AND sha = ?');
+
+  db.transaction(() => {
+    if (mode === 'full') {
+      deleteAllStatement.run(repoId);
+    } else if (since) {
+      const remoteShas = new Set<string>(commits.map((item) => item.sha));
+      const existingCommits = selectRecentStatement.all(repoId, since) as ExistingCommitRow[];
+
+      for (const commit of existingCommits) {
+        if (!remoteShas.has(commit.sha)) {
+          deleteRecentStatement.run(repoId, commit.sha);
+        }
+      }
+    }
+
+    for (const commit of commits) {
+      insertStatement.run(
+        commit.userId,
+        commit.repoId,
+        commit.sha,
+        commit.authorLogin,
+        commit.authorName,
+        commit.authorEmail,
+        commit.canonicalAuthorId,
+        commit.commitTime,
+        commit.message,
+        commit.isMergeCommit,
+        commit.isBot
+      );
+
+      saveAuthorIdentity(
+        commit.userId,
+        commit.canonicalAuthorId,
+        commit.authorLogin,
+        commit.authorEmail,
+        commit.authorName
+      );
+    }
+  })();
 }
 
 function createIdleSyncStatus(userId: string): SyncStatusView {
@@ -202,6 +411,7 @@ export async function syncGitHubData(args: SyncArguments): Promise<void> {
     const githubUser = await fetchGitHubUser(token);
     const repositories = await resolveRepositories(args, token, config.includePrivateRepos);
     const repositoryCount = repositories.length;
+    let removedRepositoryCount = 0;
 
     updateRunningSync(args.userId, {
       message: repositoryCount > 0 ? `待同步 ${repositoryCount} 个仓库` : '未发现可同步的仓库',
@@ -237,6 +447,17 @@ export async function syncGitHubData(args: SyncArguments): Promise<void> {
       progressCompleted: repositoryCount,
       currentRepository: null
     });
+
+    if (args.mode === 'full') {
+      removedRepositoryCount = removeStaleRepositories(args.userId, repositories);
+
+      if (removedRepositoryCount > 0) {
+        logger.info('全量同步后清理失效公开仓库', {
+          userId: args.userId,
+          removedRepositoryCount
+        });
+      }
+    }
 
     recomputeAllAnalytics(args.userId, config.timezone || DEFAULT_TIMEZONE);
 
@@ -536,85 +757,11 @@ async function syncRepository(
     .prepare('SELECT MAX(commit_time) AS latestCommitTime FROM commits WHERE repo_id = ?')
     .get(repoId) as { latestCommitTime: string | null } | undefined;
 
-  const since =
-    mode === 'full'
-      ? undefined
-      : latestCommit?.latestCommitTime ?? subDays(new Date(), 90).toISOString();
-
+  const since = resolveCommitSyncSince(latestCommit?.latestCommitTime ?? null, mode);
   const commits = await fetchRepoCommits(token, repository.owner.login, repository.name, since);
-  const insertStatement = db.prepare(
-    `
-      INSERT INTO commits (
-        user_id,
-        repo_id,
-        sha,
-        author_login,
-        author_name,
-        author_email,
-        canonical_author_id,
-        commit_time,
-        message,
-        is_merge_commit,
-        is_bot
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(repo_id, sha) DO UPDATE SET
-        user_id = excluded.user_id,
-        author_login = excluded.author_login,
-        author_name = excluded.author_name,
-        author_email = excluded.author_email,
-        canonical_author_id = excluded.canonical_author_id,
-        commit_time = excluded.commit_time,
-        message = excluded.message,
-        is_merge_commit = excluded.is_merge_commit,
-        is_bot = excluded.is_bot
-    `
-  );
+  const preparedCommits = prepareCommitRecords(userId, repoId, githubUsername, config.emailAliases, commits);
 
-  const normalizedAliases = config.emailAliases.map((item) => escapeHtml(item.toLowerCase()));
-
-  for (const item of commits) {
-    const authorLogin = escapeHtml(item.author?.login ?? '');
-    const authorName = escapeHtml(item.commit.author?.name ?? '');
-    const authorEmail = escapeHtml((item.commit.author?.email ?? '').toLowerCase());
-    const commitTime = item.commit.author?.date;
-
-    if (!commitTime) {
-      continue;
-    }
-
-    const canonicalAuthorId = resolveCanonicalAuthorId(
-      userId,
-      githubUsername,
-      normalizedAliases,
-      authorLogin,
-      authorEmail
-    );
-
-    const isBot =
-      authorLogin.endsWith('[bot]') ||
-      authorEmail.includes('bot') ||
-      authorName.toLowerCase().includes('bot');
-
-    const isMergeCommit =
-      item.parents.length > 1 || item.commit.message.toLowerCase().startsWith('merge ');
-
-    insertStatement.run(
-      userId,
-      repoId,
-      item.sha,
-      authorLogin,
-      authorName,
-      authorEmail,
-      canonicalAuthorId,
-      commitTime,
-      escapeHtml(item.commit.message),
-      isMergeCommit ? 1 : 0,
-      isBot ? 1 : 0
-    );
-
-    saveAuthorIdentity(userId, canonicalAuthorId, authorLogin, authorEmail, authorName);
-  }
+  persistRepositoryCommits(repoId, mode, since, preparedCommits);
 }
 
 function detectStackTags(repoId: number): StackTagRecord[] {
