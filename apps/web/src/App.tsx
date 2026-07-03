@@ -87,6 +87,12 @@ function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
     <aside className={collapsed ? 'app-shell__sidebar app-shell__sidebar--collapsed' : 'app-shell__sidebar'}>
       <div className="app-shell__sidebar-head">
         <div className="app-shell__brand">
+          {/* 品牌图标，使用 public 目录下的 SVG */}
+          <img
+            className="app-shell__brand-icon"
+            src="/favicon.svg"
+            alt="CodeView"
+          />
           <div className="app-shell__brand-copy">
             <strong className="app-shell__brand-title">CODEVIEW</strong>
             <span className="app-shell__brand-subtitle">GitHub 项目数据看板</span>

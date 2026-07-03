@@ -188,6 +188,18 @@ option {
   min-width: 0;
 }
 
+/* 品牌图标 —— 侧栏顶部的 SVG 品牌标识 */
+.app-shell__brand-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  margin-right: 8px;
+  opacity: 0.92;
+  transition:
+    margin 0.22s ease,
+    opacity 0.18s ease;
+}
+
 .app-shell__nav-icon svg {
   width: 16px;
   height: 16px;
@@ -415,6 +427,11 @@ option {
   max-width: 0;
   opacity: 0;
   transform: translateX(-8px);
+}
+
+/* 折叠态下品牌图标居中，移除右侧间距 */
+.app-shell--collapsed .app-shell__brand-icon {
+  margin-right: 0;
 }
 
 .app-shell--collapsed .app-shell__nav-item {
