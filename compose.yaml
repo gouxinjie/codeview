@@ -26,4 +26,4 @@ services:
     depends_on:
       - server
     ports:
-      - "${CODEVIEW_HTTP_PORT:-80}:80"
+      - "${CODEVIEW_HTTP_PORT:-81}:80"

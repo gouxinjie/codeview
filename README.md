@@ -299,7 +299,7 @@ GitHub 接口整理文档见：
 /var/www/codeview/shared/.env
 ```
 
-如果宿主机 `80` 端口已被占用，可以通过 `CODEVIEW_HTTP_PORT` 改到其他端口，例如 `81`。此时需要同步把 `WEB_ORIGIN` 改成实际访问地址，例如：
+当前生产部署默认使用 `81` 端口，避免和宿主机常见的 `80` 端口服务冲突。此时需要把 `WEB_ORIGIN` 配成实际访问地址，例如：
 
 ```env
 CODEVIEW_HTTP_PORT=81
