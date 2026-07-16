@@ -15,6 +15,7 @@ import {
 import { Link } from 'react-router-dom';
 import { EmptyState } from '@/components/commons/EmptyState';
 import { LoadingBlock } from '@/components/commons/LoadingBlock';
+import { useAppStore } from '@/store/appStore';
 import type { RepoListItem } from '@/types/api';
 import { fetchRepositories } from '@/utils/api';
 import { formatNumber } from '@/utils/date';
@@ -48,6 +49,7 @@ interface FilterSelectOption {
  * 默认值：无。
  */
 function RepositoriesPage(): JSX.Element {
+  const { setSelectedRepoId } = useAppStore();
   const [allRepositories, setAllRepositories] = useState<RepoListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -303,7 +305,12 @@ function RepositoriesPage(): JSX.Element {
             }
           >
             {pagedRepositories.map((item, index) => (
-              <Link key={item.id} to={`/repos/${item.id}`} className="repository-card">
+              <Link
+                key={item.id}
+                to={`/repos/${item.id}`}
+                className="repository-card"
+                onClick={() => setSelectedRepoId(item.id)}
+              >
                 <div className="repository-card__header">
                   <span className="repository-card__index">{(currentPage - 1) * pageSize + index + 1}</span>
                   <div className="repository-card__identity">

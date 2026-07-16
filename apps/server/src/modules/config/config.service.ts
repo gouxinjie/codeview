@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { env } from '@/config/env';
 import { db } from '@/database/client';
+import { fetchGitHubUser } from '@/modules/sync/github.client';
 import { createCsrfToken, decryptValue, encryptValue, escapeHtml, unescapeHtml } from '@/utils/security';
 import { DEFAULT_TIMEZONE, resolveTimezone } from '@/utils/time';
+import { logger } from '@/utils/logger';
 
 const configInputSchema = z.object({
   userId: z.string().min(1),
@@ -38,6 +40,8 @@ export interface ConfigView {
   timezone: string;
   csrfToken: string;
   lastSyncedAt: string | null;
+  canManage: boolean;
+  adminConfigured: boolean;
 }
 
 export type ConfigInput = z.infer<typeof configInputSchema>;
@@ -96,8 +100,8 @@ function parseAliases(payload: string): string[] {
     : [];
 }
 
-/* 读取脱敏后的配置，供前端页面展示。 */
-export function getConfig(userId: string): ConfigView {
+/* 读取配置视图；公开访客仅能拿到脱敏后的只读信息。 */
+export function getConfig(userId: string, canManage = false): ConfigView {
   ensureConfig(userId);
 
   const row = db
@@ -128,20 +132,22 @@ export function getConfig(userId: string): ConfigView {
     userId,
     githubUsername: row.github_username,
     hasToken: tryDecryptStoredToken(row.github_token_encrypted) !== null,
-    emailAliases: parseAliases(row.email_aliases_json),
+    emailAliases: canManage ? parseAliases(row.email_aliases_json) : [],
     includePrivateRepos: row.include_private_repos === 1,
     syncIntervalMinutes: row.sync_interval_minutes,
     defaultTimeRange: row.default_time_range,
     timezone: resolveTimezone(row.timezone),
-    csrfToken: row.csrf_token,
-    lastSyncedAt: row.last_synced_at
+    csrfToken: canManage ? row.csrf_token : '',
+    lastSyncedAt: row.last_synced_at,
+    canManage,
+    adminConfigured: env.adminConfigured
   };
 }
 
 /* 保存配置并更新作者归一化映射，便于后续个人维度统计。 */
 export function saveConfig(payload: ConfigInput): ConfigView {
   const config = configInputSchema.parse(payload);
-  const existing = getConfig(config.userId);
+  const existing = getConfig(config.userId, true);
   const now = new Date().toISOString();
   const normalizedEmailAliases = [...new Set(config.emailAliases.map((item) => escapeHtml(item.trim().toLowerCase())))];
   const resolvedTimezone = resolveTimezone(config.timezone);
@@ -241,10 +247,7 @@ export function saveConfig(payload: ConfigInput): ConfigView {
     );
   }
 
-  return {
-    ...getConfig(config.userId),
-    csrfToken: existing.csrfToken
-  };
+  return getConfig(config.userId, true);
 }
 
 /* 校验 POST 请求携带的 CSRF 令牌。 */
@@ -253,7 +256,7 @@ export function validateCsrfToken(userId: string, csrfToken: string | undefined)
     return false;
   }
 
-  const config = getConfig(userId);
+  const config = getConfig(userId, true);
   return config.csrfToken === csrfToken;
 }
 
@@ -304,4 +307,43 @@ export function listSyncScheduleConfigs(): SyncScheduleConfig[] {
       `
     )
     .all() as SyncScheduleConfig[];
+}
+
+/* 服务首次启动时，可将环境变量中的管理员 GitHub 配置导入到默认用户空间。 */
+export async function bootstrapOwnerConfigFromEnv(userId: string): Promise<void> {
+  ensureConfig(userId);
+
+  if (!env.githubToken) {
+    return;
+  }
+
+  const existingConfig = getConfig(userId, true);
+
+  if (existingConfig.hasToken) {
+    return;
+  }
+
+  const githubUsername = (await fetchGitHubUser(env.githubToken)).login;
+
+  saveConfig({
+    userId,
+    githubUsername,
+    githubToken: env.githubToken,
+    emailAliases: existingConfig.emailAliases,
+    includePrivateRepos: env.githubIncludePrivateRepos,
+    syncIntervalMinutes: existingConfig.syncIntervalMinutes,
+    defaultTimeRange:
+      existingConfig.defaultTimeRange === '90d' ||
+      existingConfig.defaultTimeRange === '180d' ||
+      existingConfig.defaultTimeRange === '365d'
+        ? existingConfig.defaultTimeRange
+        : '30d',
+    timezone: existingConfig.timezone
+  });
+
+  logger.info('已从环境变量完成默认管理员 GitHub 配置导入', {
+    userId,
+    githubUsername,
+    includePrivateRepos: env.githubIncludePrivateRepos
+  });
 }

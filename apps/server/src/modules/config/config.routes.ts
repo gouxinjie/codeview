@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { isAdminAuthenticated } from '@/modules/auth/auth.service';
 import { refreshUserSchedule } from '@/config/scheduler';
 import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '@/utils/http';
 import { getConfig, saveConfig, validateCsrfToken } from '@/modules/config/config.service';
@@ -27,7 +28,7 @@ configRouter.get(
       return;
     }
 
-    sendSuccess(response, getConfig(userId));
+    sendSuccess(response, getConfig(userId, isAdminAuthenticated(request)));
   })
 );
 
@@ -36,6 +37,11 @@ configRouter.post(
   createRouteHandler((request, response) => {
     const payload = configBodySchema.parse(request.body);
     const csrfToken = request.header('x-csrf-token');
+
+    if (!isAdminAuthenticated(request)) {
+      sendFailure(response, 401, 'ADMIN_AUTH_REQUIRED', '请先以管理员身份登录后再修改配置');
+      return;
+    }
 
     if (!validateCsrfToken(payload.userId, csrfToken)) {
       sendFailure(response, 403, 'INVALID_CSRF_TOKEN', 'CSRF 令牌校验失败');

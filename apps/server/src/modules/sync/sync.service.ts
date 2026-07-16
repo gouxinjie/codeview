@@ -339,7 +339,7 @@ function createIdleSyncStatus(userId: string): SyncStatusView {
 
 /* 校验同步前置配置，避免后台任务刚启动就立即失败。 */
 function assertSyncReady(userId: string): void {
-  const config = getConfig(userId);
+  const config = getConfig(userId, true);
   const token = getDecryptedToken(userId);
 
   if (!config.githubUsername || !token) {
@@ -373,7 +373,7 @@ export async function syncGitHubData(args: SyncArguments): Promise<void> {
     return;
   }
 
-  const config = getConfig(args.userId);
+  const config = getConfig(args.userId, true);
   const token = getDecryptedToken(args.userId);
 
   if (!config.githubUsername || !token) {
@@ -741,7 +741,7 @@ async function syncRepository(
   repository: GitHubRepoResponse,
   mode: SyncMode
 ): Promise<void> {
-  const config = getConfig(userId);
+  const config = getConfig(userId, true);
   const repoId = upsertRepository(userId, repository);
   const [languages, files, traffic] = await Promise.all([
     fetchRepoLanguages(token, repository.owner.login, repository.name),

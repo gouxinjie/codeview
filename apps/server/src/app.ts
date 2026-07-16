@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { env } from '@/config/env';
 import '@/database/client';
+import { authRouter } from '@/modules/auth/auth.routes';
 import { configRouter } from '@/modules/config/config.routes';
 import { dashboardRouter } from '@/modules/dashboard/dashboard.routes';
 import { reposRouter } from '@/modules/repos/repos.routes';
@@ -67,6 +68,7 @@ export function createApp(): express.Express {
     });
   });
 
+  app.use('/api', authRouter);
   app.use('/api', configRouter);
   app.use('/api', syncRouter);
   app.use('/api', dashboardRouter);

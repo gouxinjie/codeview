@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { isAdminAuthenticated } from '@/modules/auth/auth.service';
 import { validateCsrfToken } from '@/modules/config/config.service';
 import { getSyncStatus, startSyncGitHubData } from '@/modules/sync/sync.service';
 import { createRouteHandler, getUserIdFromRequest, sendFailure, sendSuccess } from '@/utils/http';
@@ -20,6 +21,11 @@ syncRouter.post(
   createRouteHandler(async (request, response) => {
     const payload = syncBodySchema.parse(request.body);
 
+    if (!isAdminAuthenticated(request)) {
+      sendFailure(response, 401, 'ADMIN_AUTH_REQUIRED', '请先以管理员身份登录后再启动同步');
+      return;
+    }
+
     if (!validateSyncRequest(payload.userId, request.header('x-csrf-token'))) {
       sendFailure(response, 403, 'INVALID_CSRF_TOKEN', 'CSRF 令牌校验失败');
       return;
@@ -33,6 +39,11 @@ syncRouter.post(
   '/sync/incremental',
   createRouteHandler(async (request, response) => {
     const payload = syncBodySchema.parse(request.body);
+
+    if (!isAdminAuthenticated(request)) {
+      sendFailure(response, 401, 'ADMIN_AUTH_REQUIRED', '请先以管理员身份登录后再启动同步');
+      return;
+    }
 
     if (!validateSyncRequest(payload.userId, request.header('x-csrf-token'))) {
       sendFailure(response, 403, 'INVALID_CSRF_TOKEN', 'CSRF 令牌校验失败');
@@ -48,6 +59,11 @@ syncRouter.post(
   createRouteHandler(async (request, response) => {
     const payload = syncBodySchema.parse(request.body);
     const repoId = Number(request.params.id);
+
+    if (!isAdminAuthenticated(request)) {
+      sendFailure(response, 401, 'ADMIN_AUTH_REQUIRED', '请先以管理员身份登录后再启动同步');
+      return;
+    }
 
     if (!validateSyncRequest(payload.userId, request.header('x-csrf-token'))) {
       sendFailure(response, 403, 'INVALID_CSRF_TOKEN', 'CSRF 令牌校验失败');

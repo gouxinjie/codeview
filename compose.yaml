@@ -10,6 +10,10 @@ services:
       DATABASE_PATH: ${DATABASE_PATH:-/app/data/asset-console.db}
       DEFAULT_USER_ID: ${DEFAULT_USER_ID:-local-user}
       ENCRYPTION_SECRET: ${ENCRYPTION_SECRET}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_INCLUDE_PRIVATE_REPOS: ${GITHUB_INCLUDE_PRIVATE_REPOS:-false}
     volumes:
       - ${CODEVIEW_DATA_DIR:-./data}:/app/data
     expose:

@@ -26,6 +26,15 @@ export interface ConfigView {
   timezone: string;
   csrfToken: string;
   lastSyncedAt: string | null;
+  canManage: boolean;
+  adminConfigured: boolean;
+}
+
+export interface AdminSessionView {
+  authenticated: boolean;
+  adminConfigured: boolean;
+  loginCsrfToken: string;
+  adminUsername: string;
 }
 
 export interface ConfigPayload {

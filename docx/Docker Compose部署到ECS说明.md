@@ -67,6 +67,23 @@ WEB_ORIGIN=http://你的域名或ECS公网IP
 DATABASE_PATH=/app/data/asset-console.db
 DEFAULT_USER_ID=local-user
 ENCRYPTION_SECRET=替换成足够长的随机字符串
+ADMIN_USERNAME=xinjie
+ADMIN_PASSWORD=替换为高强度密码
+GITHUB_TOKEN=替换为新的 GitHub PAT
+GITHUB_INCLUDE_PRIVATE_REPOS=false
+```
+
+如果你准备把这个 Token 存到 GitHub Actions Secrets 中，请不要直接把 Secret 命名为 `GITHUB_TOKEN`。  
+GitHub Secrets 名称不能以 `GITHUB_` 开头，建议改为：
+
+```text
+CODEVIEW_GITHUB_TOKEN
+```
+
+然后在写入 ECS 的 `shared/.env` 时，再映射回项目实际使用的环境变量名：
+
+```env
+GITHUB_TOKEN=从 CODEVIEW_GITHUB_TOKEN 注入的值
 ```
 
 如果宿主机 `80` 端口已经被其他服务占用，可以改成：
@@ -85,11 +102,48 @@ WEB_ORIGIN=http://你的域名或公网IP:81
 - `WEB_ORIGIN`：前端实际访问地址
 - `DATABASE_PATH`：容器内数据库路径
 - `ENCRYPTION_SECRET`：GitHub Token 加密密钥
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD`：配置中心管理员登录账号
+- `GITHUB_TOKEN`：服务端访问 GitHub API 的 Token
+- `GITHUB_INCLUDE_PRIVATE_REPOS`：是否同步私有仓库
 
 重点：
 
 - `WEB_ORIGIN` 必须与实际访问地址完全一致
 - 如果你把 `CODEVIEW_HTTP_PORT` 改成了 `81`，`WEB_ORIGIN` 也要同步改成 `http://域名或IP:81`
+
+## 当前生产模式说明
+
+当前线上实现采用的是：
+
+- **公开访客模式**：访客直接查看已经同步完成的项目数据；
+- **单管理员模式**：管理员登录配置中心后，才允许改配置和手动触发同步。
+
+配置中心登录账号来自：
+
+```env
+ADMIN_USERNAME
+ADMIN_PASSWORD
+```
+
+GitHub Token 不会通过前端回显给用户，前端仅展示“是否已连接”状态。
+
+## 首次部署时的自动导入行为
+
+当前服务端支持在启动时自动导入 GitHub 配置。
+
+若满足以下条件：
+
+1. `shared/.env` 中已经配置 `GITHUB_TOKEN`
+2. 当前数据库尚未保存 GitHub Token
+
+服务启动时会自动：
+
+- 使用 `GITHUB_TOKEN` 请求 GitHub 用户信息；
+- 自动解析 GitHub 用户名；
+- 把用户名、Token、私有仓库同步开关写入数据库；
+- 若数据库还没有成功同步记录，则自动触发首轮同步。
+
+因此在一台新的 ECS 上，管理员不需要先进入页面手工粘贴 Token，也能完成首次接入。
 
 ## GitHub Actions Secrets
 
@@ -103,6 +157,7 @@ WEB_ORIGIN=http://你的域名或公网IP:81
 - `ACR_NAMESPACE`
 - `ACR_USERNAME`
 - `ACR_PASSWORD`
+- `CODEVIEW_GITHUB_TOKEN`（如需通过 GitHub Secrets 管理站点默认 GitHub Token）
 
 含义如下：
 
@@ -114,6 +169,17 @@ WEB_ORIGIN=http://你的域名或公网IP:81
 - `ACR_NAMESPACE`：ACR 命名空间，例如 `codeview`
 - `ACR_USERNAME`：ACR 登录用户名
 - `ACR_PASSWORD`：ACR 登录密码
+- `CODEVIEW_GITHUB_TOKEN`：GitHub Actions 中保存的站点默认 GitHub Token，后续需映射到服务端 `.env` 的 `GITHUB_TOKEN`
+
+工作流还会读取以下 GitHub Actions Variables（建议配置在 `production` Environment 下）：
+
+- `WEB_ORIGIN`（必填）
+- `CODEVIEW_HTTP_PORT`（可选，默认 `80`）
+- `CODEVIEW_DATA_DIR`（可选，默认 `/var/www/codeview/shared/data`）
+- `SERVER_PORT`（可选，默认 `3101`）
+- `DATABASE_PATH`（可选，默认 `/app/data/asset-console.db`）
+- `DEFAULT_USER_ID`（可选，默认 `local-user`）
+- `GITHUB_INCLUDE_PRIVATE_REPOS`（可选，默认 `false`）
 
 ## 部署流程
 

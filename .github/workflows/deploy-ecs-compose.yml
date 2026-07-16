@@ -74,6 +74,51 @@ jobs:
       - name: Package release bundle
         run: git archive --format=tar.gz --output "codeview-${GITHUB_SHA}.tar.gz" HEAD
 
+      - name: Generate production env file
+        shell: bash
+        env:
+          CODEVIEW_HTTP_PORT: ${{ vars.CODEVIEW_HTTP_PORT }}
+          CODEVIEW_DATA_DIR: ${{ vars.CODEVIEW_DATA_DIR }}
+          SERVER_PORT: ${{ vars.SERVER_PORT }}
+          WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+          DATABASE_PATH: ${{ vars.DATABASE_PATH }}
+          DEFAULT_USER_ID: ${{ vars.DEFAULT_USER_ID }}
+          GITHUB_INCLUDE_PRIVATE_REPOS: ${{ vars.GITHUB_INCLUDE_PRIVATE_REPOS }}
+          ENCRYPTION_SECRET: ${{ secrets.ENCRYPTION_SECRET }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          CODEVIEW_GITHUB_TOKEN: ${{ secrets.CODEVIEW_GITHUB_TOKEN }}
+          ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
+          ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${WEB_ORIGIN}" ]; then
+            echo "WEB_ORIGIN 未配置，请在 GitHub Environment/Repository Variables 中提供 WEB_ORIGIN" >&2
+            exit 1
+          fi
+
+          if [ -z "${ENCRYPTION_SECRET}" ] || [ -z "${ADMIN_USERNAME}" ] || [ -z "${ADMIN_PASSWORD}" ]; then
+            echo "缺少必填 Secrets：ENCRYPTION_SECRET / ADMIN_USERNAME / ADMIN_PASSWORD" >&2
+            exit 1
+          fi
+
+          cat > deploy.generated.env <<EOF
+          CODEVIEW_HTTP_PORT=${CODEVIEW_HTTP_PORT:-80}
+          CODEVIEW_DATA_DIR=${CODEVIEW_DATA_DIR:-/var/www/codeview/shared/data}
+          SERVER_IMAGE=${ACR_REGISTRY}/${ACR_NAMESPACE}/server:${GITHUB_SHA}
+          WEB_IMAGE=${ACR_REGISTRY}/${ACR_NAMESPACE}/web:${GITHUB_SHA}
+          SERVER_PORT=${SERVER_PORT:-3101}
+          WEB_ORIGIN=${WEB_ORIGIN}
+          DATABASE_PATH=${DATABASE_PATH:-/app/data/asset-console.db}
+          DEFAULT_USER_ID=${DEFAULT_USER_ID:-local-user}
+          ENCRYPTION_SECRET=${ENCRYPTION_SECRET}
+          ADMIN_USERNAME=${ADMIN_USERNAME}
+          ADMIN_PASSWORD=${ADMIN_PASSWORD}
+          GITHUB_TOKEN=${CODEVIEW_GITHUB_TOKEN}
+          GITHUB_INCLUDE_PRIVATE_REPOS=${GITHUB_INCLUDE_PRIVATE_REPOS:-false}
+          EOF
+
       - name: Prepare SSH key
         shell: bash
         run: |
@@ -88,6 +133,12 @@ jobs:
             "codeview-${GITHUB_SHA}.tar.gz" \
             "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/codeview-${GITHUB_SHA}.tar.gz"
 
+      - name: Upload production env file
+        run: |
+          scp -P "${{ secrets.ECS_PORT }}" \
+            "deploy.generated.env" \
+            "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:/tmp/codeview-${GITHUB_SHA}.env"
+
       - name: Deploy on ECS
         run: |
           ssh -p "${{ secrets.ECS_PORT }}" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" <<EOF
@@ -98,6 +149,7 @@ jobs:
           CURRENT_LINK="\$BASE_DIR/current"
           mkdir -p "\$RELEASE_DIR" "\$SHARED_DIR/data"
           tar -xzf "/tmp/codeview-${GITHUB_SHA}.tar.gz" -C "\$RELEASE_DIR"
+          mv "/tmp/codeview-${GITHUB_SHA}.env" "\$SHARED_DIR/.env"
           ln -sfn "\$RELEASE_DIR" "\$CURRENT_LINK"
           docker login \
             --username "${{ secrets.ACR_USERNAME }}" \

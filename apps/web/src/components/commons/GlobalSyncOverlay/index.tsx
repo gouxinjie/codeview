@@ -137,6 +137,7 @@ export function GlobalSyncOverlay(): ReactElement | null {
   }, [currentTime, syncStarting, syncStatus, userId]);
 
   const visible = syncOverlayVisible || syncStarting || displayStatus.status === 'running';
+  const shouldBlockPageClose = syncStarting || displayStatus.status === 'running';
 
   const progressPercent = useMemo<number>(() => {
     if (displayStatus.status === 'success') {
@@ -159,6 +160,25 @@ export function GlobalSyncOverlay(): ReactElement | null {
       : displayStatus.status === 'success'
         ? 'global-sync-overlay__panel global-sync-overlay__panel--success'
         : 'global-sync-overlay__panel';
+
+  useEffect(() => {
+    if (!shouldBlockPageClose) {
+      return;
+    }
+
+    /* 同步执行中阻止用户直接刷新或关闭页面，避免误以为任务已中断。 */
+    const handleBeforeUnload = (event: BeforeUnloadEvent): string => {
+      event.preventDefault();
+      event.returnValue = '同步仍在进行中，请等待成功或失败后再关闭页面。';
+      return event.returnValue;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [shouldBlockPageClose]);
 
   if (!visible) {
     return null;
@@ -222,6 +242,13 @@ export function GlobalSyncOverlay(): ReactElement | null {
           <span>当前仓库</span>
           <strong>{displayStatus.currentRepository ?? '等待分配同步仓库'}</strong>
         </div>
+
+        {shouldBlockPageClose && (
+          <div className="global-sync-overlay__repo">
+            <span>页面提示</span>
+            <strong>同步执行中，请勿关闭或刷新当前页面。</strong>
+          </div>
+        )}
       </div>
     </div>
   );

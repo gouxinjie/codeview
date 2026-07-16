@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/commons/EmptyState';
 import { LoadingBlock } from '@/components/commons/LoadingBlock';
 import { PanelHeading } from '@/components/commons/PanelHeading';
 import { ScoreRing } from '@/components/commons/ScoreRing';
+import { useAppStore } from '@/store/appStore';
 import type {
   HeatmapCell,
   RepoActivityPoint,
@@ -103,6 +104,7 @@ const STACK_TABS: string[] = ['语言分布', '技术栈标签', '依赖文件']
 function RepositoryDetailPage(): JSX.Element {
   const params = useParams<{ repoId: string }>();
   const repoId = Number(params.repoId);
+  const { setSelectedRepoId } = useAppStore();
   const heatmapMainRef = useRef<HTMLDivElement | null>(null);
   const [detail, setDetail] = useState<RepoDetail | null>(null);
   const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
@@ -122,6 +124,8 @@ function RepositoryDetailPage(): JSX.Element {
       setLoading(false);
       return;
     }
+
+    setSelectedRepoId(repoId);
 
     let active = true;
 
@@ -178,7 +182,7 @@ function RepositoryDetailPage(): JSX.Element {
     return () => {
       active = false;
     };
-  }, [repoId]);
+  }, [repoId, setSelectedRepoId]);
 
   useEffect(() => {
     if (!heatmapMainRef.current || heatmap.length === 0) {

@@ -1,11 +1,11 @@
 import { lazy, Suspense, useEffect, useState, type ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { AlertCircle, BarChart3, Boxes, FileText, FolderOpen, LayoutGrid, Settings2 } from 'lucide-react';
+import { AlertCircle, BarChart3, Boxes, CheckCircle2, FileText, FolderOpen, LayoutGrid, Settings2 } from 'lucide-react';
 import { BrowserRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { GlobalSyncOverlay } from '@/components/commons/GlobalSyncOverlay';
 import { LoadingBlock } from '@/components/commons/LoadingBlock';
 import { useAppStore } from '@/store/appStore';
-import { fetchConfig } from '@/utils/api';
+import { fetchAdminSession, fetchConfig, fetchSyncStatus } from '@/utils/api';
 
 const DashboardPage = lazy(() => import('./pages/Dashboard'));
 const RepositoriesPage = lazy(() => import('./pages/Repositories'));
@@ -24,6 +24,7 @@ interface SidebarItem {
   icon: SidebarIconName;
   end?: boolean;
   match?: (pathname: string) => boolean;
+  onClick?: () => void;
 }
 
 interface SidebarNavigationProps {
@@ -58,7 +59,8 @@ function SidebarIcon(props: { name: SidebarIconName }): ReactElement {
 function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
   const { collapsed, onToggleCollapse } = props;
   const location = useLocation();
-  const { config } = useAppStore();
+  const { config, selectedRepoId, showToast } = useAppStore();
+  const repositoryDetailPath = selectedRepoId ? `/repos/${selectedRepoId}` : undefined;
 
   const items: SidebarItem[] = [
     { label: '首页 Dashboard', subtitle: '总览看板', to: '/', icon: 'dashboard', end: true },
@@ -73,9 +75,12 @@ function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
     {
       label: '项目详情',
       subtitle: '项目画像',
-      to: '/repos',
+      to: repositoryDetailPath,
       icon: 'detail',
-      match: (pathname) => /^\/repos\/\d+$/.test(pathname)
+      match: (pathname) => /^\/repos\/\d+$/.test(pathname),
+      onClick: () => {
+        showToast('请先从首页排行或项目列表中选择一个项目。', 'error');
+      }
     },
     { label: '技术栈分析', subtitle: '标签与语言', to: '/stack-analysis', icon: 'stack', end: true },
     { label: '洞察中心', subtitle: '自动结论', to: '/insights', icon: 'insight', end: true },
@@ -144,7 +149,13 @@ function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
           }
 
           return (
-            <button key={item.label} type="button" className="app-shell__nav-item app-shell__nav-item--ghost" title={item.label}>
+            <button
+              key={item.label}
+              type="button"
+              className="app-shell__nav-item app-shell__nav-item--ghost"
+              title={item.label}
+              onClick={item.onClick}
+            >
               <span className="app-shell__nav-icon">
                 <SidebarIcon name={item.icon} />
               </span>
@@ -175,7 +186,7 @@ function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
 
 function AppFrame(): ReactElement {
   const location = useLocation();
-  const { userId, setConfig, setConfigLoaded } = useAppStore();
+  const { userId, toast, clearToast, setAdminSession, setConfig, setConfigLoaded, setSyncStatus } = useAppStore();
   const [bootstrapError, setBootstrapError] = useState<string>('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const routeTransitionKey = `${location.pathname}${location.search}`;
@@ -185,10 +196,16 @@ function AppFrame(): ReactElement {
 
     const loadConfig = async (): Promise<void> => {
       try {
-        const result = await fetchConfig();
+        const [configResult, adminSessionResult, syncStatusResult] = await Promise.all([
+          fetchConfig(),
+          fetchAdminSession(),
+          fetchSyncStatus()
+        ]);
 
         if (active) {
-          setConfig(result);
+          setAdminSession(adminSessionResult);
+          setConfig(configResult);
+          setSyncStatus(syncStatusResult);
           setConfigLoaded(true);
           setBootstrapError('');
         }
@@ -205,7 +222,21 @@ function AppFrame(): ReactElement {
     return () => {
       active = false;
     };
-  }, [setConfig, setConfigLoaded, userId]);
+  }, [setAdminSession, setConfig, setConfigLoaded, setSyncStatus, userId]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      clearToast();
+    }, 3200);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [clearToast, toast]);
 
   return (
     <div className={sidebarCollapsed ? 'app-shell app-shell--collapsed' : 'app-shell'}>
@@ -235,6 +266,22 @@ function AppFrame(): ReactElement {
       </div>
 
       <GlobalSyncOverlay />
+      {toast && (
+        <div
+          className={
+            toast.tone === 'success'
+              ? 'app-toast app-toast--success'
+              : 'app-toast app-toast--error'
+          }
+          role="status"
+          aria-live="polite"
+        >
+          <span className="app-toast__icon" aria-hidden="true">
+            {toast.tone === 'success' ? <CheckCircle2 strokeWidth={1.8} /> : <AlertCircle strokeWidth={1.8} />}
+          </span>
+          <span className="app-toast__message">{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -1142,9 +1142,11 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 18px;
+  padding: 14px;
   background: rgba(3, 6, 7, 0.82);
   backdrop-filter: blur(12px);
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 .dashboard-config-modal__backdrop--open {
@@ -1156,14 +1158,14 @@
 }
 
 .dashboard-config-modal {
-  width: min(1320px, calc(100vw - 36px));
-  max-height: calc(100vh - 36px);
+  width: min(1240px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid rgba(184, 255, 59, 0.14);
-  border-radius: 18px;
+  border-radius: 16px;
   background:
     linear-gradient(135deg, rgba(184, 255, 59, 0.08), transparent 18%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0)),
@@ -1187,7 +1189,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
+  gap: 12px;
 }
 
 .dashboard-config-modal__copy {
@@ -1195,7 +1197,7 @@
 }
 
 .dashboard-config-modal__eyebrow {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: var(--color-accent);
   font-family: var(--font-mono);
   font-size: 0.76rem;
@@ -1205,33 +1207,34 @@
 
 .dashboard-config-modal__title {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 1.48rem;
   font-family: var(--font-display);
 }
 
 .dashboard-config-modal__description {
-  margin: 10px 0 0;
+  margin: 6px 0 0;
   color: #7f8a7f;
-  line-height: 1.75;
+  font-size: 0.82rem;
+  line-height: 1.6;
 }
 
 .dashboard-config-modal__actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 
 .dashboard-config-modal__link,
 .dashboard-config-modal__close {
-  min-height: 38px;
+  min-height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .dashboard-config-modal__link {
-  padding: 10px 14px;
+  padding: 8px 12px;
   border: 1px solid rgba(184, 255, 59, 0.14);
   border-radius: 12px;
   color: var(--color-text-primary);
@@ -1241,14 +1244,15 @@
 }
 
 .dashboard-config-modal__close {
-  min-width: 72px;
+  min-width: 64px;
 }
 
 .dashboard-config-modal__body {
   flex: 1 1 auto;
   min-height: 0;
-  padding-right: 2px;
+  padding-right: 0;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 @keyframes dashboard-config-backdrop-enter {
@@ -1395,7 +1399,7 @@
   .dashboard-config-modal {
     width: calc(100vw - 20px);
     max-height: calc(100vh - 20px);
-    padding: 12px;
+    padding: 10px;
   }
 
 }

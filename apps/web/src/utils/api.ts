@@ -1,5 +1,6 @@
 import { useAppStore } from '@/store/appStore';
 import type {
+  AdminSessionView,
   ApiResponse,
   ConfigPayload,
   ConfigView,
@@ -30,6 +31,7 @@ interface RequestOptions {
   method?: 'GET' | 'POST';
   query?: Record<string, QueryValue>;
   body?: object;
+  csrfMode?: 'config' | 'login' | 'none';
 }
 
 interface ApiFailurePayload {
@@ -56,11 +58,19 @@ function buildUrl(path: string, query?: Record<string, QueryValue>): string {
 
 async function requestApi<T>(path: string, options?: RequestOptions): Promise<T> {
   const state = useAppStore.getState();
+  const csrfMode = options?.csrfMode ?? 'config';
+  const csrfToken =
+    csrfMode === 'config'
+      ? state.csrfToken
+      : csrfMode === 'login'
+        ? state.adminSession?.loginCsrfToken ?? ''
+        : '';
   const response = await fetch(buildUrl(path, options?.query), {
+    credentials: 'include',
     method: options?.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
-      ...(options?.method === 'POST' && state.csrfToken ? { 'x-csrf-token': state.csrfToken } : {})
+      ...(options?.method === 'POST' && csrfToken ? { 'x-csrf-token': csrfToken } : {})
     },
     body:
       options?.method === 'POST'
@@ -100,6 +110,31 @@ async function requestApi<T>(path: string, options?: RequestOptions): Promise<T>
 /* 读取当前用户配置。 */
 export function fetchConfig(): Promise<ConfigView> {
   return requestApi<ConfigView>('/config');
+}
+
+/* 读取当前管理员登录态与登录专用 CSRF 令牌。 */
+export function fetchAdminSession(): Promise<AdminSessionView> {
+  return requestApi<AdminSessionView>('/auth/session');
+}
+
+/* 提交管理员账号密码并建立受保护的后台登录态。 */
+export function loginAdmin(username: string, password: string): Promise<AdminSessionView> {
+  return requestApi<AdminSessionView>('/auth/login', {
+    method: 'POST',
+    body: {
+      username,
+      password
+    },
+    csrfMode: 'login'
+  });
+}
+
+/* 退出管理员登录，恢复公开访客模式。 */
+export function logoutAdmin(): Promise<AdminSessionView> {
+  return requestApi<AdminSessionView>('/auth/logout', {
+    method: 'POST',
+    csrfMode: 'login'
+  });
 }
 
 /* 保存配置。 */

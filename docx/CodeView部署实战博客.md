@@ -306,6 +306,14 @@ WEB_ORIGIN=http://codeview.example.com
 DATABASE_PATH=/app/data/asset-console.db
 DEFAULT_USER_ID=local-user
 ENCRYPTION_SECRET=替换成足够长的随机字符串
+
+# 单管理员登录配置
+ADMIN_USERNAME=xinjie
+ADMIN_PASSWORD=替换为高强度密码
+
+# GitHub 数据源配置
+GITHUB_TOKEN=替换为新的 GitHub PAT
+GITHUB_INCLUDE_PRIVATE_REPOS=false
 ```
 
 这里最关键的是两个变量：
@@ -335,6 +343,63 @@ WEB_ORIGIN=http://codeview.example.com
 ```env
 WEB_ORIGIN=http://***.***.***.***:81
 ```
+
+### 3. 当前生产配置的实际含义
+
+当前项目已经不是“所有人都能直接改配置”的模式，而是：
+
+- 访客进入网站后，直接浏览已经同步完成的公开数据；
+- 管理员进入配置中心后，使用 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 登录；
+- 登录成功后，才可以修改 GitHub 用户名、更新 Token、保存配置、手动触发同步；
+- 前端不会回显已保存的 GitHub Token，只会展示“Token 已连接”的状态。
+
+也就是说，线上站点现在更接近：
+
+- **公开访客模式**：只读浏览；
+- **单管理员模式**：登录后可写。
+
+### 4. `GITHUB_TOKEN` 在生产环境中的作用
+
+当前实现里，`GITHUB_TOKEN` 不再只是一个“手动粘贴到页面输入框里”的值。
+
+如果生产环境满足下面两个条件：
+
+1. `shared/.env` 中配置了 `GITHUB_TOKEN`
+2. 数据库里当前默认用户还没有保存过 GitHub Token
+
+那么服务启动时会自动执行一次初始化导入：
+
+- 用 `GITHUB_TOKEN` 请求 GitHub 用户信息；
+- 自动解析 GitHub 用户名；
+- 把用户名、Token 和“是否包含私有仓库”的配置写入数据库；
+- 若当前数据库还没有成功同步记录，则启动后还会自动发起首轮同步。
+
+这意味着在一台新的 ECS 上，配置好 `shared/.env` 后，**不需要管理员先手工打开页面填 Token**，服务就可以自动完成首次接入。
+
+### 5. 当前最小可用的生产变量
+
+结合目前代码，生产环境至少应保证以下变量存在：
+
+```env
+SERVER_PORT=3101
+WEB_ORIGIN=http://codeview.example.com
+DATABASE_PATH=/app/data/asset-console.db
+DEFAULT_USER_ID=local-user
+ENCRYPTION_SECRET=替换成足够长的随机字符串
+
+ADMIN_USERNAME=xinjie
+ADMIN_PASSWORD=替换为高强度密码
+
+GITHUB_TOKEN=替换为新的 GitHub PAT
+GITHUB_INCLUDE_PRIVATE_REPOS=false
+```
+
+其中：
+
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD`：用于配置中心登录；
+- `GITHUB_TOKEN`：用于后端访问 GitHub API 和首启自动导入；
+- `GITHUB_INCLUDE_PRIVATE_REPOS`：控制是否同步私有仓库；
+- `ENCRYPTION_SECRET`：用于加密保存 GitHub Token。
 
 
 ## 九、GitHub 仓库里需要配置什么
