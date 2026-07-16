@@ -8,11 +8,13 @@ import './index.scss';
 
 const POLL_INTERVAL_MS = 1500;
 const HIDE_DELAY_MS = 1200;
+const PAGE_RELOAD_DELAY_MS = 1600;
 
 /* 页面级同步遮罩，统一展示同步时间、仓库进度和当前状态。 */
 export function GlobalSyncOverlay(): ReactElement | null {
   const {
     userId,
+    config,
     syncStatus,
     syncOverlayVisible,
     syncStarting,
@@ -22,7 +24,10 @@ export function GlobalSyncOverlay(): ReactElement | null {
     setSyncStatus
   } = useAppStore();
   const [currentTime, setCurrentTime] = useState<string>(new Date().toISOString());
+  const [reloadRequestKey, setReloadRequestKey] = useState<string>('');
   const completionKeyRef = useRef<string>('');
+  const previousStatusRef = useRef<SyncStatus['status'] | null>(syncStatus?.status ?? null);
+  const reloadScheduledRef = useRef<boolean>(false);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -58,6 +63,17 @@ export function GlobalSyncOverlay(): ReactElement | null {
           setSyncStarting(false);
         }
 
+        if (
+          latestStatus.status === 'success' &&
+          previousStatusRef.current === 'running' &&
+          latestStatus.scope === 'full' &&
+          !config?.lastSyncedAt &&
+          !reloadScheduledRef.current
+        ) {
+          reloadScheduledRef.current = true;
+          setReloadRequestKey(`${latestStatus.finishedAt ?? latestStatus.updatedAt ?? Date.now()}`);
+        }
+
         if (latestStatus.status === 'success') {
           const completionKey = `${latestStatus.finishedAt ?? ''}:${latestStatus.message}`;
 
@@ -86,6 +102,8 @@ export function GlobalSyncOverlay(): ReactElement | null {
             setSyncOverlayVisible(false);
           }, HIDE_DELAY_MS);
         }
+
+        previousStatusRef.current = latestStatus.status;
       } catch {
         if (active) {
           setSyncStarting(false);
@@ -108,6 +126,7 @@ export function GlobalSyncOverlay(): ReactElement | null {
       }
     };
   }, [
+    config?.lastSyncedAt,
     setConfig,
     setSyncOverlayVisible,
     setSyncStarting,
@@ -116,6 +135,25 @@ export function GlobalSyncOverlay(): ReactElement | null {
     syncStarting,
     syncStatus?.status
   ]);
+
+  useEffect(() => {
+    previousStatusRef.current = syncStatus?.status ?? null;
+  }, [syncStatus?.status]);
+
+  useEffect(() => {
+    if (!reloadRequestKey) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      /* 首轮全量同步完成后自动刷新一次页面，确保首页聚合数据与最新落库数据保持一致。 */
+      window.location.reload();
+    }, PAGE_RELOAD_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [reloadRequestKey]);
 
   const displayStatus = useMemo<SyncStatus>(() => {
     if (syncStatus) {
