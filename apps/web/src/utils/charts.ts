@@ -12,6 +12,7 @@ function buildTooltip(): EChartsOption['tooltip'] {
   return {
     backgroundColor: baseCard,
     borderColor: themeBorder,
+    confine: true,
     textStyle: {
       color: themeText
     }
@@ -80,6 +81,7 @@ export function buildLanguageOption(data: Array<{ name: string; value: number }>
   return {
     tooltip: buildTooltip(),
     legend: {
+      type: 'scroll',
       bottom: 0,
       textStyle: {
         color: themeSubText
@@ -184,6 +186,7 @@ export function buildTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
   return {
     tooltip: buildTooltip(),
     legend: {
+      type: 'scroll',
       top: 0,
       textStyle: {
         color: themeSubText

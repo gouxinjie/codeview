@@ -39,6 +39,7 @@ import {
 } from '@/utils/api';
 import { formatDateTime, formatNumber, translateSyncStatus } from '@/utils/date';
 import { buildHeatmapMatrix, buildHeatmapMonthLabels, getLongestHeatmapStreak } from '@/utils/heatmap';
+import { getResponsiveChartHeight, useResponsiveViewport, type ResponsiveViewport } from '@/utils/responsive';
 import './index.scss';
 
 type MetricIconName = 'repos' | 'commits' | 'active' | 'views' | 'clones';
@@ -103,6 +104,7 @@ function getModalFocusableElements(container: HTMLElement | null): HTMLElement[]
  */
 function DashboardPage(): JSX.Element {
   const { config, selectedRepoId, setSelectedRepoId } = useAppStore();
+  const viewport = useResponsiveViewport();
   const configModalTitleId = useId();
   const configModalRef = useRef<HTMLElement | null>(null);
   const configModalLastActiveRef = useRef<HTMLElement | null>(null);
@@ -509,8 +511,8 @@ function DashboardPage(): JSX.Element {
               <span>按自然日统计</span>
             </div>
             <ReactECharts
-              option={buildActivityTrendOption(overview.personalTrend)}
-              style={{ height: 212 }}
+              option={buildActivityTrendOption(overview.personalTrend, viewport)}
+              style={{ height: getResponsiveChartHeight(viewport, { desktop: 212, tablet: 192, mobile: 176 }) }}
               opts={{ renderer: 'svg' }}
             />
           </div>
@@ -657,8 +659,8 @@ function DashboardPage(): JSX.Element {
               </div>
             </div>
             <ReactECharts
-              option={buildRepoBarOption(selectedTrendData)}
-              style={{ height: 190 }}
+              option={buildRepoBarOption(selectedTrendData, viewport)}
+              style={{ height: getResponsiveChartHeight(viewport, { desktop: 190, tablet: 176, mobile: 164 }) }}
               opts={{ renderer: 'svg' }}
             />
           </div>
@@ -673,8 +675,8 @@ function DashboardPage(): JSX.Element {
               <div className="dashboard-language">
                 <div className="dashboard-language__chart">
                   <ReactECharts
-                    option={buildLanguageDonutOption(languageDonutData)}
-                    style={{ height: 196 }}
+                    option={buildLanguageDonutOption(languageDonutData, viewport)}
+                    style={{ height: getResponsiveChartHeight(viewport, { desktop: 196, tablet: 188, mobile: 178 }) }}
                     opts={{ renderer: 'svg' }}
                   />
                 </div>
@@ -709,8 +711,8 @@ function DashboardPage(): JSX.Element {
           <div className="dashboard-stack__block">
             <div className="dashboard-stack__block-title">栈变化趋势（按当前构成投影）</div>
             <ReactECharts
-              option={buildStackProjectionOption(projectionSeries)}
-              style={{ height: 178 }}
+              option={buildStackProjectionOption(projectionSeries, viewport)}
+              style={{ height: getResponsiveChartHeight(viewport, { desktop: 178, tablet: 170, mobile: 164 }) }}
               opts={{ renderer: 'svg' }}
             />
           </div>
@@ -894,8 +896,12 @@ function buildRankingSubtitle(item: RankingItem): string {
   return stackSummary || item.fullName;
 }
 
-function buildActivityTrendOption(data: Array<{ date: string; count: number }>): EChartsOption {
+function buildActivityTrendOption(
+  data: Array<{ date: string; count: number }>,
+  viewport: ResponsiveViewport
+): EChartsOption {
   const sliced = data.slice(-30);
+  const isMobile = viewport === 'mobile';
 
   return {
     tooltip: {
@@ -907,17 +913,17 @@ function buildActivityTrendOption(data: Array<{ date: string; count: number }>):
       }
     },
     grid: {
-      top: 20,
-      left: 34,
-      right: 12,
-      bottom: 22
+      top: isMobile ? 16 : 20,
+      left: isMobile ? 26 : 34,
+      right: isMobile ? 8 : 12,
+      bottom: isMobile ? 20 : 22
     },
     xAxis: {
       type: 'category',
       data: sliced.map((item) => item.date.slice(5)),
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisLine: {
         lineStyle: {
@@ -929,7 +935,7 @@ function buildActivityTrendOption(data: Array<{ date: string; count: number }>):
       type: 'value',
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       splitLine: {
         lineStyle: {
@@ -942,7 +948,7 @@ function buildActivityTrendOption(data: Array<{ date: string; count: number }>):
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 6,
+        symbolSize: isMobile ? 5 : 6,
         lineStyle: {
           color: '#c4ef28',
           width: 2
@@ -961,8 +967,9 @@ function buildActivityTrendOption(data: Array<{ date: string; count: number }>):
   };
 }
 
-function buildRepoBarOption(data: RepoActivityPoint[]): EChartsOption {
+function buildRepoBarOption(data: RepoActivityPoint[], viewport: ResponsiveViewport): EChartsOption {
   const sliced = data.slice(-18);
+  const isMobile = viewport === 'mobile';
 
   return {
     tooltip: {
@@ -974,17 +981,17 @@ function buildRepoBarOption(data: RepoActivityPoint[]): EChartsOption {
       }
     },
     grid: {
-      top: 18,
-      left: 28,
-      right: 10,
-      bottom: 24
+      top: isMobile ? 14 : 18,
+      left: isMobile ? 24 : 28,
+      right: isMobile ? 8 : 10,
+      bottom: isMobile ? 22 : 24
     },
     xAxis: {
       type: 'category',
       data: sliced.map((item) => item.label.replace('2026-', '')),
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisLine: {
         lineStyle: {
@@ -996,7 +1003,7 @@ function buildRepoBarOption(data: RepoActivityPoint[]): EChartsOption {
       type: 'value',
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       splitLine: {
         lineStyle: {
@@ -1007,7 +1014,7 @@ function buildRepoBarOption(data: RepoActivityPoint[]): EChartsOption {
     series: [
       {
         type: 'bar',
-        barWidth: 10,
+        barWidth: isMobile ? 8 : 10,
         itemStyle: {
           color: '#bde82c',
           borderRadius: [8, 8, 0, 0]
@@ -1040,8 +1047,9 @@ function normalizeLanguageDistribution(data: Array<{ name: string; value: number
   }));
 }
 
-function buildLanguageDonutOption(data: LanguageDonutItem[]): EChartsOption {
+function buildLanguageDonutOption(data: LanguageDonutItem[], viewport: ResponsiveViewport): EChartsOption {
   const top = data[0];
+  const isMobile = viewport === 'mobile';
 
   return {
     color: data.map((item) => item.color),
@@ -1064,7 +1072,7 @@ function buildLanguageDonutOption(data: LanguageDonutItem[]): EChartsOption {
             style: {
               text: '主要语言',
               fill: '#88909b',
-              fontSize: 9,
+              fontSize: isMobile ? 8 : 9,
               fontWeight: 500,
               align: 'center'
             }
@@ -1077,7 +1085,7 @@ function buildLanguageDonutOption(data: LanguageDonutItem[]): EChartsOption {
             style: {
               text: top.name,
               fill: '#f4f7fb',
-              fontSize: 12,
+              fontSize: isMobile ? 10 : 12,
               fontWeight: 700,
               align: 'center'
             }
@@ -1090,7 +1098,7 @@ function buildLanguageDonutOption(data: LanguageDonutItem[]): EChartsOption {
             style: {
               text: `${top.value.toFixed(1)}%`,
               fill: '#d9dde4',
-              fontSize: 11,
+              fontSize: isMobile ? 10 : 11,
               fontWeight: 600,
               align: 'center'
             }
@@ -1100,7 +1108,7 @@ function buildLanguageDonutOption(data: LanguageDonutItem[]): EChartsOption {
     series: [
       {
         type: 'pie',
-        radius: ['53%', '78%'],
+        radius: isMobile ? ['50%', '74%'] : ['53%', '78%'],
         center: ['50%', '54%'],
         startAngle: 88,
         avoidLabelOverlap: false,
@@ -1124,7 +1132,12 @@ function buildLanguageDonutOption(data: LanguageDonutItem[]): EChartsOption {
   };
 }
 
-function buildStackProjectionOption(series: Array<{ name: string; values: number[] }>): EChartsOption {
+function buildStackProjectionOption(
+  series: Array<{ name: string; values: number[] }>,
+  viewport: ResponsiveViewport
+): EChartsOption {
+  const isMobile = viewport === 'mobile';
+
   return {
     tooltip: {
       trigger: 'axis',
@@ -1136,24 +1149,27 @@ function buildStackProjectionOption(series: Array<{ name: string; values: number
     },
     legend: {
       top: 0,
-      right: 0,
+      right: isMobile ? 'center' : 0,
+      left: isMobile ? 'center' : 'auto',
+      itemWidth: isMobile ? 8 : 10,
+      itemHeight: isMobile ? 8 : 10,
       textStyle: {
         color: '#d7dccf',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       }
     },
     grid: {
-      top: 30,
-      left: 28,
-      right: 10,
-      bottom: 24
+      top: isMobile ? 42 : 30,
+      left: isMobile ? 24 : 28,
+      right: isMobile ? 8 : 10,
+      bottom: isMobile ? 22 : 24
     },
     xAxis: {
       type: 'category',
       data: ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06'],
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisLine: {
         lineStyle: {
@@ -1166,7 +1182,7 @@ function buildStackProjectionOption(series: Array<{ name: string; values: number
       max: 60,
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10,
+        fontSize: isMobile ? 9 : 10,
         formatter: '{value}%'
       },
       splitLine: {
@@ -1180,7 +1196,7 @@ function buildStackProjectionOption(series: Array<{ name: string; values: number
       type: 'line',
       smooth: true,
       symbol: 'circle',
-      symbolSize: 5,
+      symbolSize: isMobile ? 4 : 5,
       lineStyle: {
         width: 2
       },

@@ -29,6 +29,7 @@ import type {
 } from '@/types/api';
 import { fetchStatistics } from '@/utils/api';
 import { formatDate, formatDateTime, formatNumber, translateSyncStatus } from '@/utils/date';
+import { getResponsiveChartHeight, useResponsiveViewport, type ResponsiveViewport } from '@/utils/responsive';
 import './index.scss';
 
 type TrendGranularity = 'day' | 'week' | 'month';
@@ -98,6 +99,7 @@ const SUMMARY_ICON_LIST: LucideIcon[] = [
  */
 function StatisticsPage(): ReactElement {
   const { config, configLoaded } = useAppStore();
+  const viewport = useResponsiveViewport();
   const [statistics, setStatistics] = useState<StatisticsData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -382,8 +384,8 @@ function StatisticsPage(): ReactElement {
             ))}
           </div>
           <ReactECharts
-            option={buildStatisticsTrendOption(trendSeries)}
-            style={{ height: 248 }}
+            option={buildStatisticsTrendOption(trendSeries, viewport)}
+            style={{ height: getResponsiveChartHeight(viewport, { desktop: 248, tablet: 220, mobile: 188 }) }}
             opts={{ renderer: 'svg' }}
           />
         </article>
@@ -469,8 +471,8 @@ function StatisticsPage(): ReactElement {
             <span>合并提交</span>
           </div>
           <ReactECharts
-            option={buildChangeOption(statistics.changeTrend)}
-            style={{ height: 180 }}
+            option={buildChangeOption(statistics.changeTrend, viewport)}
+            style={{ height: getResponsiveChartHeight(viewport, { desktop: 180, tablet: 170, mobile: 160 }) }}
             opts={{ renderer: 'svg' }}
           />
         </article>
@@ -547,13 +549,14 @@ function DonutPanelContent(props: {
   centerLabel: string;
 }): ReactElement {
   const { data, centerLabel } = props;
+  const viewport = useResponsiveViewport();
 
   return (
     <div className="statistics-panel__donut-layout">
       <div className="statistics-panel__donut-chart">
         <ReactECharts
-          option={buildDonutOption(data, centerLabel)}
-          style={{ height: 236 }}
+          option={buildDonutOption(data, centerLabel, viewport)}
+          style={{ height: getResponsiveChartHeight(viewport, { desktop: 236, tablet: 214, mobile: 186 }) }}
           opts={{ renderer: 'svg' }}
         />
       </div>
@@ -801,7 +804,9 @@ function buildTrendSeries(
   }));
 }
 
-function buildStatisticsTrendOption(data: TrendPoint[]): EChartsOption {
+function buildStatisticsTrendOption(data: TrendPoint[], viewport: ResponsiveViewport): EChartsOption {
+  const isMobile = viewport === 'mobile';
+
   return {
     tooltip: {
       trigger: 'axis',
@@ -812,10 +817,10 @@ function buildStatisticsTrendOption(data: TrendPoint[]): EChartsOption {
       }
     },
     grid: {
-      top: 18,
-      left: 40,
-      right: 16,
-      bottom: 28
+      top: isMobile ? 14 : 18,
+      left: isMobile ? 28 : 40,
+      right: isMobile ? 10 : 16,
+      bottom: isMobile ? 22 : 28
     },
     xAxis: {
       type: 'category',
@@ -823,7 +828,7 @@ function buildStatisticsTrendOption(data: TrendPoint[]): EChartsOption {
       boundaryGap: false,
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisLine: {
         lineStyle: {
@@ -835,7 +840,7 @@ function buildStatisticsTrendOption(data: TrendPoint[]): EChartsOption {
       type: 'value',
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       splitLine: {
         lineStyle: {
@@ -848,7 +853,7 @@ function buildStatisticsTrendOption(data: TrendPoint[]): EChartsOption {
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 6,
+        symbolSize: isMobile ? 5 : 6,
         lineStyle: {
           color: '#c4ef28',
           width: 2
@@ -881,9 +886,14 @@ function buildDonutLegendItems(
   }));
 }
 
-function buildDonutOption(data: StatisticsBreakdownItem[], centerLabel: string): EChartsOption {
+function buildDonutOption(
+  data: StatisticsBreakdownItem[],
+  centerLabel: string,
+  viewport: ResponsiveViewport
+): EChartsOption {
   const normalizedData = buildDonutLegendItems(data);
   const primary = normalizedData[0];
+  const isMobile = viewport === 'mobile';
 
   return {
     color: normalizedData.map((item) => item.color),
@@ -899,19 +909,19 @@ function buildDonutOption(data: StatisticsBreakdownItem[], centerLabel: string):
     title: {
       text: primary ? `${centerLabel}\n${primary.name}\n${primary.percentage.toFixed(1)}%` : '暂无数据',
       left: '50%',
-      top: '36.5%',
+      top: isMobile ? '39%' : '36.5%',
       textAlign: 'center',
       textStyle: {
         color: '#f3ebdd',
-        fontSize: 12,
+        fontSize: isMobile ? 10 : 12,
         fontWeight: 600,
-        lineHeight: 18
+        lineHeight: isMobile ? 16 : 18
       }
     },
     series: [
       {
         type: 'pie',
-        radius: ['52%', '78%'],
+        radius: isMobile ? ['48%', '72%'] : ['52%', '78%'],
         center: ['50%', '52%'],
         startAngle: 95,
         avoidLabelOverlap: true,
@@ -928,8 +938,12 @@ function buildDonutOption(data: StatisticsBreakdownItem[], centerLabel: string):
   };
 }
 
-function buildChangeOption(data: Array<{ date: string; positive: number; negative: number }>): EChartsOption {
+function buildChangeOption(
+  data: Array<{ date: string; positive: number; negative: number }>,
+  viewport: ResponsiveViewport
+): EChartsOption {
   const sliced = data.slice(-30);
+  const isMobile = viewport === 'mobile';
 
   return {
     tooltip: {
@@ -943,25 +957,25 @@ function buildChangeOption(data: Array<{ date: string; positive: number; negativ
     legend: {
       bottom: 0,
       icon: 'circle',
-      itemWidth: 8,
-      itemHeight: 8,
+      itemWidth: isMobile ? 7 : 8,
+      itemHeight: isMobile ? 7 : 8,
       textStyle: {
         color: '#9aa48f',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       }
     },
     grid: {
       top: 12,
-      left: 30,
-      right: 12,
-      bottom: 34
+      left: isMobile ? 24 : 30,
+      right: isMobile ? 8 : 12,
+      bottom: isMobile ? 30 : 34
     },
     xAxis: {
       type: 'category',
       data: sliced.map((item) => item.date.slice(5)),
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisLine: {
         lineStyle: {
@@ -973,7 +987,7 @@ function buildChangeOption(data: Array<{ date: string; positive: number; negativ
       type: 'value',
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       splitLine: {
         lineStyle: {

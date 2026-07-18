@@ -49,6 +49,7 @@ import {
   fetchStatistics
 } from '@/utils/api';
 import { formatDate, formatDateTime, formatNumber, translateSyncStatus } from '@/utils/date';
+import { getResponsiveChartHeight, useResponsiveViewport, type ResponsiveViewport } from '@/utils/responsive';
 import './index.scss';
 
 type InsightRangeDays = 30 | 90 | 180 | 365;
@@ -194,6 +195,7 @@ const INSIGHT_RANGE_OPTIONS: InsightRangeOption[] = [
 
 function InsightCenterPage(): ReactElement {
   const { config, configLoaded } = useAppStore();
+  const viewport = useResponsiveViewport();
   const [rangeDays, setRangeDays] = useState<InsightRangeDays>(() => parseDefaultInsightRange(config?.defaultTimeRange));
   const [reloadSeed, setReloadSeed] = useState<number>(0);
   const [activeSection, setActiveSection] = useState<InsightSectionKey>('overview');
@@ -717,8 +719,8 @@ function InsightCenterPage(): ReactElement {
                   ))}
                 </div>
                 <ReactECharts
-                  option={buildTechTrendOption(snapshot.stackAnalysis)}
-                  style={{ height: 170 }}
+                  option={buildTechTrendOption(snapshot.stackAnalysis, viewport)}
+                  style={{ height: getResponsiveChartHeight(viewport, { desktop: 170, tablet: 162, mobile: 154 }) }}
                   opts={{ renderer: 'svg' }}
                 />
               </StoryCard>
@@ -818,8 +820,8 @@ function InsightCenterPage(): ReactElement {
                   {rangeDays > 30 ? `${rangeLabel}按周提交流量` : `${rangeLabel}按日提交流量`}
                 </div>
                 <ReactECharts
-                  option={buildRhythmOption(featuredRhythmSeries, rangeDays)}
-                  style={{ height: 150 }}
+                  option={buildRhythmOption(featuredRhythmSeries, rangeDays, viewport)}
+                  style={{ height: getResponsiveChartHeight(viewport, { desktop: 150, tablet: 144, mobile: 138 }) }}
                   opts={{ renderer: 'svg' }}
                 />
               </StoryCard>
@@ -832,8 +834,8 @@ function InsightCenterPage(): ReactElement {
             <PanelHeading variant="dashboard" eyebrow="DISTRIBUTION" title="洞察分布" />
             <div className="insight-side-panel__chart">
               <ReactECharts
-                option={buildInsightDistributionOption(insightDistribution)}
-                style={{ height: 188 }}
+                option={buildInsightDistributionOption(insightDistribution, viewport)}
+                style={{ height: getResponsiveChartHeight(viewport, { desktop: 188, tablet: 178, mobile: 168 }) }}
                 opts={{ renderer: 'svg' }}
               />
             </div>
@@ -858,8 +860,8 @@ function InsightCenterPage(): ReactElement {
               accessory={<span className="insight-side-panel__corner-note">{rangeLabel}</span>}
             />
             <ReactECharts
-              option={buildSignalTrendOption(signalTrendSeries)}
-              style={{ height: 186 }}
+              option={buildSignalTrendOption(signalTrendSeries, viewport)}
+              style={{ height: getResponsiveChartHeight(viewport, { desktop: 186, tablet: 176, mobile: 164 }) }}
               opts={{ renderer: 'svg' }}
             />
             <div className="insight-side-panel__footnote">基于提交活跃度与风险信号综合生成</div>
@@ -1259,8 +1261,9 @@ function buildRepositoryWindowMetrics(params: {
   );
 }
 
-function buildInsightDistributionOption(data: InsightDistributionItem[]): EChartsOption {
+function buildInsightDistributionOption(data: InsightDistributionItem[], viewport: ResponsiveViewport): EChartsOption {
   const total = data.reduce((sum, item) => sum + item.value, 0);
+  const isMobile = viewport === 'mobile';
 
   return {
     color: data.map((item) => item.color),
@@ -1280,15 +1283,15 @@ function buildInsightDistributionOption(data: InsightDistributionItem[]): EChart
       textAlign: 'center',
       textStyle: {
         color: '#f3ebdd',
-        fontSize: 13,
+        fontSize: isMobile ? 11 : 13,
         fontWeight: 700,
-        lineHeight: 20
+        lineHeight: isMobile ? 18 : 20
       }
     },
     series: [
       {
         type: 'pie',
-        radius: ['53%', '78%'],
+        radius: isMobile ? ['48%', '74%'] : ['53%', '78%'],
         center: ['50%', '50%'],
         startAngle: 88,
         avoidLabelOverlap: false,
@@ -1305,7 +1308,12 @@ function buildInsightDistributionOption(data: InsightDistributionItem[]): EChart
   };
 }
 
-function buildSignalTrendOption(data: Array<{ label: string; value: number }>): EChartsOption {
+function buildSignalTrendOption(
+  data: Array<{ label: string; value: number }>,
+  viewport: ResponsiveViewport
+): EChartsOption {
+  const isMobile = viewport === 'mobile';
+
   return {
     tooltip: {
       trigger: 'axis',
@@ -1316,10 +1324,10 @@ function buildSignalTrendOption(data: Array<{ label: string; value: number }>): 
       }
     },
     grid: {
-      top: 16,
-      left: 28,
-      right: 14,
-      bottom: 24
+      top: isMobile ? 12 : 16,
+      left: isMobile ? 24 : 28,
+      right: isMobile ? 8 : 14,
+      bottom: isMobile ? 20 : 24
     },
     xAxis: {
       type: 'category',
@@ -1327,7 +1335,7 @@ function buildSignalTrendOption(data: Array<{ label: string; value: number }>): 
       boundaryGap: false,
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisLine: {
         lineStyle: {
@@ -1339,7 +1347,7 @@ function buildSignalTrendOption(data: Array<{ label: string; value: number }>): 
       type: 'value',
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       splitLine: {
         lineStyle: {
@@ -1353,7 +1361,7 @@ function buildSignalTrendOption(data: Array<{ label: string; value: number }>): 
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 6,
+        symbolSize: isMobile ? 5 : 6,
         lineStyle: {
           color: '#c4ef28',
           width: 2
@@ -1372,8 +1380,9 @@ function buildSignalTrendOption(data: Array<{ label: string; value: number }>): 
   };
 }
 
-function buildTechTrendOption(stackAnalysis: StackAnalysisData): EChartsOption {
+function buildTechTrendOption(stackAnalysis: StackAnalysisData, viewport: ResponsiveViewport): EChartsOption {
   const series = stackAnalysis.trendSeries.slice(0, 3);
+  const isMobile = viewport === 'mobile';
 
   return {
     tooltip: {
@@ -1385,17 +1394,17 @@ function buildTechTrendOption(stackAnalysis: StackAnalysisData): EChartsOption {
       }
     },
     grid: {
-      top: 20,
-      left: 30,
-      right: 12,
-      bottom: 26
+      top: isMobile ? 14 : 20,
+      left: isMobile ? 24 : 30,
+      right: isMobile ? 8 : 12,
+      bottom: isMobile ? 22 : 26
     },
     xAxis: {
       type: 'category',
       data: stackAnalysis.trendMonths.map((item) => item.slice(5)),
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisLine: {
         lineStyle: {
@@ -1407,7 +1416,7 @@ function buildTechTrendOption(stackAnalysis: StackAnalysisData): EChartsOption {
       type: 'value',
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10,
+        fontSize: isMobile ? 9 : 10,
         formatter: '{value}%'
       },
       splitLine: {
@@ -1421,7 +1430,7 @@ function buildTechTrendOption(stackAnalysis: StackAnalysisData): EChartsOption {
       type: 'line',
       smooth: true,
       symbol: 'circle',
-      symbolSize: 5,
+      symbolSize: isMobile ? 4 : 5,
       lineStyle: {
         width: 2,
         color: getTrendSeriesColor(index)
@@ -1436,10 +1445,15 @@ function buildTechTrendOption(stackAnalysis: StackAnalysisData): EChartsOption {
   };
 }
 
-function buildRhythmOption(data: RepoActivityPoint[], rangeDays: InsightRangeDays): EChartsOption {
+function buildRhythmOption(
+  data: RepoActivityPoint[],
+  rangeDays: InsightRangeDays,
+  viewport: ResponsiveViewport
+): EChartsOption {
   const sliced = data.slice(
     rangeDays === 30 ? -14 : rangeDays === 90 ? -12 : rangeDays === 180 ? -16 : -20
   );
+  const isMobile = viewport === 'mobile';
 
   return {
     tooltip: {
@@ -1451,17 +1465,17 @@ function buildRhythmOption(data: RepoActivityPoint[], rangeDays: InsightRangeDay
       }
     },
     grid: {
-      top: 14,
-      left: 24,
-      right: 10,
-      bottom: 20
+      top: 12,
+      left: isMobile ? 20 : 24,
+      right: isMobile ? 8 : 10,
+      bottom: isMobile ? 18 : 20
     },
     xAxis: {
       type: 'category',
       data: sliced.map((item) => item.label.replace('2026-', '').replace('2025-', '')),
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisLine: {
         lineStyle: {
@@ -1473,7 +1487,7 @@ function buildRhythmOption(data: RepoActivityPoint[], rangeDays: InsightRangeDay
       type: 'value',
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       splitLine: {
         lineStyle: {
@@ -1484,7 +1498,7 @@ function buildRhythmOption(data: RepoActivityPoint[], rangeDays: InsightRangeDay
     series: [
       {
         type: 'bar',
-        barWidth: 9,
+        barWidth: isMobile ? 7 : 9,
         itemStyle: {
           color: '#bde82c',
           borderRadius: [8, 8, 0, 0]

@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { EmptyState } from '@/components/commons/EmptyState';
 import { LoadingBlock } from '@/components/commons/LoadingBlock';
 import { useAppStore } from '@/store/appStore';
+import { useResponsiveViewport } from '@/utils/responsive';
 import type { RepoListItem } from '@/types/api';
 import { fetchRepositories } from '@/utils/api';
 import { formatNumber } from '@/utils/date';
@@ -49,6 +50,8 @@ interface FilterSelectOption {
  * 默认值：无。
  */
 function RepositoriesPage(): JSX.Element {
+  const viewport = useResponsiveViewport();
+  const isMobile = viewport === 'mobile';
   const { setSelectedRepoId } = useAppStore();
   const [allRepositories, setAllRepositories] = useState<RepoListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -169,8 +172,8 @@ function RepositoriesPage(): JSX.Element {
     const start = (currentPage - 1) * pageSize;
     return sortedRepositories.slice(start, start + pageSize);
   }, [currentPage, pageSize, sortedRepositories]);
-
-  const pageNumbers = useMemo(() => buildPageNumbers(currentPage, pageCount), [currentPage, pageCount]);
+  
+  const pageNumbers = useMemo(() => buildPageNumbers(currentPage, pageCount, isMobile), [currentPage, pageCount, isMobile]);
   const sortOptions = useMemo<FilterSelectOption[]>(
     () => [
       { value: 'score', label: '综合评分' },
@@ -644,7 +647,23 @@ function matchesActivityLevel(item: RepoListItem, filter: RepositoryActivityFilt
   return item.activeDays30d < 5;
 }
 
-function buildPageNumbers(currentPage: number, pageCount: number): Array<number | 'ellipsis'> {
+function buildPageNumbers(currentPage: number, pageCount: number, isMobile: boolean): Array<number | 'ellipsis'> {
+  if (isMobile) {
+    if (pageCount <= 3) {
+      return Array.from({ length: pageCount }, (_, index) => index + 1);
+    }
+
+    if (currentPage === 1) {
+      return [1, 2, 'ellipsis', pageCount];
+    }
+
+    if (currentPage === pageCount) {
+      return [1, 'ellipsis', pageCount - 1, pageCount];
+    }
+
+    return [1, 'ellipsis', currentPage, 'ellipsis', pageCount];
+  }
+
   if (pageCount <= 6) {
     return Array.from({ length: pageCount }, (_, index) => index + 1);
   }

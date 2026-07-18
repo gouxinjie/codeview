@@ -25,6 +25,7 @@ import {
 } from '@/utils/api';
 import { formatDateTime, formatNumber } from '@/utils/date';
 import { buildHeatmapMatrix, buildHeatmapMonthLabels, getLongestHeatmapStreak, sumHeatmapCount } from '@/utils/heatmap';
+import { getResponsiveChartHeight, useResponsiveViewport, type ResponsiveViewport } from '@/utils/responsive';
 import './index.scss';
 
 type TrendGranularity = 'day' | 'week' | 'month';
@@ -105,6 +106,7 @@ function RepositoryDetailPage(): JSX.Element {
   const params = useParams<{ repoId: string }>();
   const repoId = Number(params.repoId);
   const { setSelectedRepoId } = useAppStore();
+  const viewport = useResponsiveViewport();
   const heatmapMainRef = useRef<HTMLDivElement | null>(null);
   const [detail, setDetail] = useState<RepoDetail | null>(null);
   const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
@@ -510,8 +512,8 @@ function RepositoryDetailPage(): JSX.Element {
           <div className="repo-detail-trend">
             <div className="repo-detail-trend__chart">
               <ReactECharts
-                option={buildRepositoryTrendOption(activeSeries)}
-                style={{ width: '100%', height: '100%', minHeight: 242 }}
+                option={buildRepositoryTrendOption(activeSeries, viewport)}
+                style={{ width: '100%', height: '100%', minHeight: getResponsiveChartHeight(viewport, { desktop: 242, tablet: 218, mobile: 186 }) }}
                 opts={{ renderer: 'svg' }}
               />
             </div>
@@ -616,8 +618,8 @@ function RepositoryDetailPage(): JSX.Element {
               <div className="repo-detail-stack__top">
                 <div className="repo-detail-stack__chart">
                   <ReactECharts
-                    option={buildRepositoryLanguageDonutOption(languageChartItems)}
-                    style={{ height: 180 }}
+                    option={buildRepositoryLanguageDonutOption(languageChartItems, viewport)}
+                    style={{ height: getResponsiveChartHeight(viewport, { desktop: 180, tablet: 172, mobile: 166 }) }}
                     opts={{ renderer: 'svg' }}
                   />
                 </div>
@@ -674,8 +676,8 @@ function RepositoryDetailPage(): JSX.Element {
           {traffic.length > 0 ? (
             <div className="repo-detail-traffic__chart">
               <ReactECharts
-                option={buildRepositoryTrafficOption(traffic)}
-                style={{ height: 190 }}
+                option={buildRepositoryTrafficOption(traffic, viewport)}
+                style={{ height: getResponsiveChartHeight(viewport, { desktop: 190, tablet: 178, mobile: 166 }) }}
                 opts={{ renderer: 'svg' }}
               />
             </div>
@@ -967,8 +969,9 @@ function buildScoreMetrics(detail: RepoDetail, stack: RepoStackDetail): ScoreMet
  * 参数说明：`data` 为按粒度聚合后的仓库提交数据。
  * 返回说明：返回 ECharts 折线图配置对象。
  */
-function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
+function buildRepositoryTrendOption(data: RepoActivityPoint[], viewport: ResponsiveViewport): EChartsOption {
   const sliced = data.slice(-30);
+  const isMobile = viewport === 'mobile';
 
   return {
     animation: false,
@@ -988,17 +991,17 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
       }
     },
     grid: {
-      top: 12,
-      left: 30,
-      right: 6,
-      bottom: 20
+      top: isMobile ? 10 : 12,
+      left: isMobile ? 24 : 30,
+      right: isMobile ? 8 : 6,
+      bottom: isMobile ? 18 : 20
     },
     xAxis: {
       type: 'category',
       data: sliced.map((item) => normalizeAxisLabel(item.label)),
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisTick: {
         show: false
@@ -1013,7 +1016,7 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
       type: 'value',
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisTick: {
         show: false
@@ -1032,7 +1035,7 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 5,
+        symbolSize: isMobile ? 4 : 5,
         lineStyle: {
           color: '#b9ec2d',
           width: 1.8
@@ -1066,8 +1069,9 @@ function buildRepositoryTrendOption(data: RepoActivityPoint[]): EChartsOption {
  * 参数说明：`data` 为仓库流量和克隆趋势数据。
  * 返回说明：返回多折线图配置对象。
  */
-function buildRepositoryTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
+function buildRepositoryTrafficOption(data: RepoTrafficPoint[], viewport: ResponsiveViewport): EChartsOption {
   const sliced = data.slice(-14);
+  const isMobile = viewport === 'mobile';
 
   return {
     animation: false,
@@ -1081,26 +1085,27 @@ function buildRepositoryTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
     },
     legend: {
       top: 0,
-      right: 0,
-      itemWidth: 8,
-      itemHeight: 8,
+      right: isMobile ? 'center' : 0,
+      left: isMobile ? 'center' : 'auto',
+      itemWidth: isMobile ? 7 : 8,
+      itemHeight: isMobile ? 7 : 8,
       textStyle: {
         color: '#9aa48f',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       }
     },
     grid: {
-      top: 30,
-      left: 28,
-      right: 12,
-      bottom: 24
+      top: isMobile ? 42 : 30,
+      left: isMobile ? 24 : 28,
+      right: isMobile ? 8 : 12,
+      bottom: isMobile ? 22 : 24
     },
     xAxis: {
       type: 'category',
       data: sliced.map((item) => item.date.slice(5)),
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisLine: {
         lineStyle: {
@@ -1112,7 +1117,7 @@ function buildRepositoryTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
       type: 'value',
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       splitLine: {
         lineStyle: {
@@ -1126,7 +1131,7 @@ function buildRepositoryTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 5,
+        symbolSize: isMobile ? 4 : 5,
         lineStyle: {
           width: 2,
           color: '#b9ec2d'
@@ -1141,7 +1146,7 @@ function buildRepositoryTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 5,
+        symbolSize: isMobile ? 4 : 5,
         lineStyle: {
           width: 2,
           color: '#56a7ff'
@@ -1156,7 +1161,7 @@ function buildRepositoryTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 5,
+        symbolSize: isMobile ? 4 : 5,
         lineStyle: {
           width: 2,
           color: '#d6a63a'
@@ -1176,10 +1181,12 @@ function buildRepositoryTrafficOption(data: RepoTrafficPoint[]): EChartsOption {
  * 返回说明：返回环形图配置对象。
  */
 function buildRepositoryLanguageDonutOption(
-  data: Array<{ language: string; percentage: number }>
+  data: Array<{ language: string; percentage: number }>,
+  viewport: ResponsiveViewport
 ): EChartsOption {
   const topLanguage = data[0];
   const colorPalette = ['#c5e832', '#8fda6b', '#668cff', '#7d85ff', '#f4c44e', '#5ab8ff', '#ff965f', '#c6c9d2'];
+  const isMobile = viewport === 'mobile';
 
   return {
     animation: false,
@@ -1203,9 +1210,9 @@ function buildRepositoryLanguageDonutOption(
             ? `主要语言\n${topLanguage.language}\n${topLanguage.percentage.toFixed(1)}%`
             : '暂无数据',
           fill: '#f3ebdd',
-          fontSize: 12,
+          fontSize: isMobile ? 10 : 12,
           fontWeight: 600,
-          lineHeight: 18,
+          lineHeight: isMobile ? 16 : 18,
           align: 'center',
           verticalAlign: 'middle'
         }
@@ -1214,7 +1221,7 @@ function buildRepositoryLanguageDonutOption(
     series: [
       {
         type: 'pie',
-        radius: ['58%', '78%'],
+        radius: isMobile ? ['52%', '74%'] : ['58%', '78%'],
         center: ['50%', '52%'],
         startAngle: 92,
         label: {

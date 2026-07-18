@@ -26,6 +26,7 @@ import type {
 } from '@/types/api';
 import { fetchStackAnalysis } from '@/utils/api';
 import { formatDateTime, formatNumber, translateSyncStatus } from '@/utils/date';
+import { getResponsiveChartHeight, useResponsiveViewport, type ResponsiveViewport } from '@/utils/responsive';
 import './index.scss';
 
 type HeaderIconName = 'user' | 'clock' | 'success' | 'stack';
@@ -89,6 +90,7 @@ const SECTION_TABS: SectionTabItem[] = [
  */
 function StackAnalysisPage(): JSX.Element {
   const { config } = useAppStore();
+  const viewport = useResponsiveViewport();
   const [months, setMonths] = useState<6 | 12 | 24>(12);
   const [activeTab, setActiveTab] = useState<StackSectionKey>('overview');
   const [stackAnalysis, setStackAnalysis] = useState<StackAnalysisData | null>(null);
@@ -161,9 +163,10 @@ function StackAnalysisPage(): JSX.Element {
         '主语言',
         stackAnalysis?.languageDistribution[0]
           ? `${stackAnalysis.languageDistribution[0].name}\n${stackAnalysis.languageDistribution[0].percentage.toFixed(1)}%`
-          : '暂无数据'
+          : '暂无数据',
+        viewport
       ),
-    [languageChartItems, stackAnalysis?.languageDistribution]
+    [languageChartItems, stackAnalysis?.languageDistribution, viewport]
   );
 
   const categoryChartOption = useMemo<EChartsOption>(
@@ -173,14 +176,15 @@ function StackAnalysisPage(): JSX.Element {
         '主分类',
         stackAnalysis?.categoryDistribution[0]
           ? `${stackAnalysis.categoryDistribution[0].name}\n${stackAnalysis.categoryDistribution[0].techCount} 项`
-          : '暂无数据'
+          : '暂无数据',
+        viewport
       ),
-    [categoryChartItems, stackAnalysis?.categoryDistribution]
+    [categoryChartItems, stackAnalysis?.categoryDistribution, viewport]
   );
 
   const trendOption = useMemo<EChartsOption>(
-    () => buildTrendOption(stackAnalysis?.trendMonths ?? [], stackAnalysis?.trendSeries ?? []),
-    [stackAnalysis?.trendMonths, stackAnalysis?.trendSeries]
+    () => buildTrendOption(stackAnalysis?.trendMonths ?? [], stackAnalysis?.trendSeries ?? [], viewport),
+    [stackAnalysis?.trendMonths, stackAnalysis?.trendSeries, viewport]
   );
 
   const technologyChips = useMemo(
@@ -320,7 +324,11 @@ function StackAnalysisPage(): JSX.Element {
           <PanelHeading variant="statistics" eyebrow="LANGUAGE" title="语言占比" />
           <div className="stack-panel__chart-layout">
             <div className="stack-panel__chart-box">
-              <ReactECharts option={languageChartOption} style={{ height: 248 }} opts={{ renderer: 'svg' }} />
+              <ReactECharts
+                option={languageChartOption}
+                style={{ height: getResponsiveChartHeight(viewport, { desktop: 248, tablet: 224, mobile: 188 }) }}
+                opts={{ renderer: 'svg' }}
+              />
             </div>
             <div className="stack-panel__legend">
               {stackAnalysis.languageDistribution.map((item) => (
@@ -338,7 +346,11 @@ function StackAnalysisPage(): JSX.Element {
           <PanelHeading variant="statistics" eyebrow="CATEGORY" title="技术栈分类分布" />
           <div className="stack-panel__chart-layout">
             <div className="stack-panel__chart-box">
-              <ReactECharts option={categoryChartOption} style={{ height: 248 }} opts={{ renderer: 'svg' }} />
+              <ReactECharts
+                option={categoryChartOption}
+                style={{ height: getResponsiveChartHeight(viewport, { desktop: 248, tablet: 224, mobile: 188 }) }}
+                opts={{ renderer: 'svg' }}
+              />
             </div>
             <div className="stack-panel__legend">
               {stackAnalysis.categoryDistribution.map((item) => (
@@ -394,7 +406,11 @@ function StackAnalysisPage(): JSX.Element {
             title="技术栈趋势变化"
             accessory={<span className="stack-panel__header-chip">按月活跃占比</span>}
           />
-          <ReactECharts option={trendOption} style={{ height: 280 }} opts={{ renderer: 'svg' }} />
+          <ReactECharts
+            option={trendOption}
+            style={{ height: getResponsiveChartHeight(viewport, { desktop: 280, tablet: 240, mobile: 196 }) }}
+            opts={{ renderer: 'svg' }}
+          />
           <div className="stack-trend__summary">
             {stackAnalysis.topTechStacks.slice(0, 5).map((item) => (
               <div key={item.name} className="stack-trend__metric">
@@ -586,8 +602,14 @@ function HeaderIcon(props: { name: HeaderIconName }): JSX.Element {
   return <Icon aria-hidden="true" strokeWidth={1.8} />;
 }
 
-function buildDonutOption(items: DonutChartItem[], centerTitle: string, centerValue: string): EChartsOption {
+function buildDonutOption(
+  items: DonutChartItem[],
+  centerTitle: string,
+  centerValue: string,
+  viewport: ResponsiveViewport
+): EChartsOption {
   const colors = ['#c5e832', '#8fda6b', '#5ab8ff', '#7d85ff', '#f4c44e', '#ff8f5a', '#a4b2c3'];
+  const isMobile = viewport === 'mobile';
 
   return {
     color: colors,
@@ -608,9 +630,9 @@ function buildDonutOption(items: DonutChartItem[], centerTitle: string, centerVa
         style: {
           text: `${centerTitle}\n${centerValue}`,
           fill: '#f3ebdd',
-          fontSize: 12,
+          fontSize: isMobile ? 10 : 12,
           fontWeight: 600,
-          lineHeight: 18,
+          lineHeight: isMobile ? 16 : 18,
           align: 'center',
           verticalAlign: 'middle'
         }
@@ -619,7 +641,7 @@ function buildDonutOption(items: DonutChartItem[], centerTitle: string, centerVa
     series: [
       {
         type: 'pie',
-        radius: ['56%', '78%'],
+        radius: isMobile ? ['50%', '74%'] : ['56%', '78%'],
         center: ['50%', '52%'],
         startAngle: 90,
         label: {
@@ -635,8 +657,13 @@ function buildDonutOption(items: DonutChartItem[], centerTitle: string, centerVa
   };
 }
 
-function buildTrendOption(monthKeys: string[], series: StackAnalysisTrendSeriesItem[]): EChartsOption {
+function buildTrendOption(
+  monthKeys: string[],
+  series: StackAnalysisTrendSeriesItem[],
+  viewport: ResponsiveViewport
+): EChartsOption {
   const colors = ['#c5e832', '#5ab8ff', '#7d85ff', '#f4c44e', '#ff8f5a'];
+  const isMobile = viewport === 'mobile';
 
   return {
     tooltip: {
@@ -649,24 +676,25 @@ function buildTrendOption(monthKeys: string[], series: StackAnalysisTrendSeriesI
     },
     legend: {
       top: 0,
-      right: 0,
+      right: isMobile ? 'center' : 0,
+      left: isMobile ? 'center' : 'auto',
       textStyle: {
         color: '#cdd3c7',
-        fontSize: 11
+        fontSize: isMobile ? 9 : 11
       }
     },
     grid: {
-      top: 38,
-      left: 34,
-      right: 12,
-      bottom: 24
+      top: isMobile ? 46 : 38,
+      left: isMobile ? 24 : 34,
+      right: isMobile ? 8 : 12,
+      bottom: isMobile ? 22 : 24
     },
     xAxis: {
       type: 'category',
       data: monthKeys.map((item) => item.slice(5)),
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10
+        fontSize: isMobile ? 9 : 10
       },
       axisLine: {
         lineStyle: {
@@ -678,7 +706,7 @@ function buildTrendOption(monthKeys: string[], series: StackAnalysisTrendSeriesI
       type: 'value',
       axisLabel: {
         color: '#7e887e',
-        fontSize: 10,
+        fontSize: isMobile ? 9 : 10,
         formatter: '{value}%'
       },
       splitLine: {
@@ -692,7 +720,7 @@ function buildTrendOption(monthKeys: string[], series: StackAnalysisTrendSeriesI
       type: 'line',
       smooth: true,
       symbol: 'circle',
-      symbolSize: 6,
+      symbolSize: isMobile ? 4 : 6,
       lineStyle: {
         width: 2,
         color: colors[index] ?? '#d5dde8'

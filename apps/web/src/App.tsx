@@ -6,6 +6,8 @@ import { GlobalSyncOverlay } from '@/components/commons/GlobalSyncOverlay';
 import { LoadingBlock } from '@/components/commons/LoadingBlock';
 import { useAppStore } from '@/store/appStore';
 import { fetchAdminSession, fetchConfig, fetchSyncStatus } from '@/utils/api';
+import { useResponsiveViewport } from '@/utils/responsive';
+import { Menu, X } from 'lucide-react';
 
 const DashboardPage = lazy(() => import('./pages/Dashboard'));
 const RepositoriesPage = lazy(() => import('./pages/Repositories'));
@@ -30,6 +32,8 @@ interface SidebarItem {
 interface SidebarNavigationProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
+  mobileVisible: boolean;
+  onCloseMobile: () => void;
 }
 
 const SIDEBAR_ICON_MAP: Record<SidebarIconName, LucideIcon> = {
@@ -57,9 +61,12 @@ function SidebarIcon(props: { name: SidebarIconName }): ReactElement {
 }
 
 function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
-  const { collapsed, onToggleCollapse } = props;
+  const { collapsed, onToggleCollapse, mobileVisible, onCloseMobile } = props;
   const location = useLocation();
   const { config, selectedRepoId, showToast } = useAppStore();
+  const viewport = useResponsiveViewport();
+  const isMobile = viewport === 'mobile';
+
   const repositoryDetailPath = selectedRepoId ? `/repos/${selectedRepoId}` : undefined;
 
   const items: SidebarItem[] = [
@@ -88,54 +95,105 @@ function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
     { label: '配置中心', subtitle: '数据源配置', to: '/config-center', icon: 'config', end: true }
   ];
 
+  const handleLinkClick = (item: SidebarItem) => {
+    if (isMobile) {
+      onCloseMobile();
+    }
+    if (item.onClick) {
+      item.onClick();
+    }
+  };
+
+  const sidebarClass = [
+    'app-shell__sidebar',
+    collapsed && !isMobile ? 'app-shell__sidebar--collapsed' : '',
+    isMobile && mobileVisible ? 'app-shell__sidebar--mobile-visible' : '',
+    isMobile ? 'app-shell__sidebar--mobile' : ''
+  ].filter(Boolean).join(' ');
+
   return (
-    <aside className={collapsed ? 'app-shell__sidebar app-shell__sidebar--collapsed' : 'app-shell__sidebar'}>
-      <div className="app-shell__sidebar-head">
-        <div className="app-shell__brand">
-          {/* 品牌图标，使用 public 目录下的 SVG */}
-          <img
-            className="app-shell__brand-icon"
-            src="/favicon.svg"
-            alt="CodeView"
-          />
-          <div className="app-shell__brand-copy">
-            <strong className="app-shell__brand-title">CODEVIEW</strong>
-            <span className="app-shell__brand-subtitle">GitHub 项目数据看板</span>
+    <>
+      {isMobile && mobileVisible && (
+        <div className="app-shell__sidebar-overlay" onClick={onCloseMobile} />
+      )}
+      <aside className={sidebarClass}>
+        <div className="app-shell__sidebar-head">
+          <div className="app-shell__brand">
+            <img
+              className="app-shell__brand-icon"
+              src="/favicon.svg"
+              alt="CodeView"
+            />
+            <div className="app-shell__brand-copy">
+              <strong className="app-shell__brand-title">CODEVIEW</strong>
+              <span className="app-shell__brand-subtitle">GitHub 项目数据看板</span>
+            </div>
           </div>
+          {!isMobile && (
+            <button
+              className={collapsed ? 'app-shell__collapse app-shell__collapse--collapsed' : 'app-shell__collapse'}
+              type="button"
+              aria-label={collapsed ? '展开导航' : '收起导航'}
+              aria-expanded={!collapsed}
+              onClick={onToggleCollapse}
+            >
+              <span />
+            </button>
+          )}
+          {isMobile && (
+            <button
+              className="app-shell__mobile-close"
+              type="button"
+              aria-label="关闭导航"
+              onClick={onCloseMobile}
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
-        <button
-          className={collapsed ? 'app-shell__collapse app-shell__collapse--collapsed' : 'app-shell__collapse'}
-          type="button"
-          aria-label={collapsed ? '展开导航' : '收起导航'}
-          aria-expanded={!collapsed}
-          onClick={onToggleCollapse}
-        >
-          <span />
-        </button>
-      </div>
 
-      <nav className="app-shell__sidebar-nav">
-        {items.map((item) => {
-          const active = item.match
-            ? item.match(location.pathname)
-            : item.to === '/'
-              ? location.pathname === '/'
-              : item.to
-                ? location.pathname.startsWith(item.to)
-                : false;
+        <nav className="app-shell__sidebar-nav">
+          {items.map((item) => {
+            const active = item.match
+              ? item.match(location.pathname)
+              : item.to === '/'
+                ? location.pathname === '/'
+                : item.to
+                  ? location.pathname.startsWith(item.to)
+                  : false;
 
-          if (item.to) {
+            if (item.to) {
+              return (
+                <NavLink
+                  key={item.label}
+                  to={item.to}
+                  end={item.end}
+                  title={item.label}
+                  onClick={() => handleLinkClick(item)}
+                  className={() =>
+                    active
+                      ? 'app-shell__nav-item app-shell__nav-item--active'
+                      : 'app-shell__nav-item'
+                  }
+                >
+                  <span className="app-shell__nav-icon">
+                    <SidebarIcon name={item.icon} />
+                  </span>
+                  <span className="app-shell__nav-copy">
+                    <strong>{item.label}</strong>
+                    <small>{item.subtitle}</small>
+                  </span>
+                </NavLink>
+              );
+            }
+
             return (
-              <NavLink
+              <button
                 key={item.label}
-                to={item.to}
-                end={item.end}
+                type="button"
+                className="app-shell__nav-item app-shell__nav-item--ghost"
                 title={item.label}
-                className={() =>
-                  active
-                    ? 'app-shell__nav-item app-shell__nav-item--active'
-                    : 'app-shell__nav-item'
-                }
+                onClick={() => handleLinkClick(item)}
               >
                 <span className="app-shell__nav-icon">
                   <SidebarIcon name={item.icon} />
@@ -144,43 +202,25 @@ function SidebarNavigation(props: SidebarNavigationProps): ReactElement {
                   <strong>{item.label}</strong>
                   <small>{item.subtitle}</small>
                 </span>
-              </NavLink>
+              </button>
             );
-          }
+          })}
+        </nav>
 
-          return (
-            <button
-              key={item.label}
-              type="button"
-              className="app-shell__nav-item app-shell__nav-item--ghost"
-              title={item.label}
-              onClick={item.onClick}
-            >
-              <span className="app-shell__nav-icon">
-                <SidebarIcon name={item.icon} />
-              </span>
-              <span className="app-shell__nav-copy">
-                <strong>{item.label}</strong>
-                <small>{item.subtitle}</small>
-              </span>
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="app-shell__sidebar-footer">
-        <div className="app-shell__sidebar-card">
-          <span className="app-shell__sidebar-card-title">数据范围</span>
-          <span>{config?.includePrivateRepos ? '公开仓库 + 私有仓库' : '公开仓库'}</span>
-          <span className="app-shell__sidebar-card-title">时区设置</span>
-          <span>{config?.timezone || 'Asia/Shanghai'}</span>
+        <div className="app-shell__sidebar-footer">
+          <div className="app-shell__sidebar-card">
+            <span className="app-shell__sidebar-card-title">数据范围</span>
+            <span>{config?.includePrivateRepos ? '公开仓库 + 私有仓库' : '公开仓库'}</span>
+            <span className="app-shell__sidebar-card-title">时区设置</span>
+            <span>{config?.timezone || 'Asia/Shanghai'}</span>
+          </div>
+          <div className="app-shell__sidebar-meta">
+            <span>© 2026 CodeView</span>
+            <span>v1.0.0</span>
+          </div>
         </div>
-        <div className="app-shell__sidebar-meta">
-          <span>© 2026 CodeView</span>
-          <span>v1.0.0</span>
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
@@ -189,7 +229,18 @@ function AppFrame(): ReactElement {
   const { userId, toast, clearToast, setAdminSession, setConfig, setConfigLoaded, setSyncStatus } = useAppStore();
   const [bootstrapError, setBootstrapError] = useState<string>('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [mobileSidebarVisible, setMobileSidebarVisible] = useState<boolean>(false);
+  const viewport = useResponsiveViewport();
+  const isMobile = viewport === 'mobile';
+  
   const routeTransitionKey = `${location.pathname}${location.search}`;
+
+  useEffect(() => {
+    // 路由变化时，如果是移动端，自动关闭侧边栏
+    if (isMobile) {
+      setMobileSidebarVisible(false);
+    }
+  }, [location.pathname, isMobile]);
 
   useEffect(() => {
     let active = true;
@@ -238,11 +289,36 @@ function AppFrame(): ReactElement {
     };
   }, [clearToast, toast]);
 
+  const shellClass = [
+    'app-shell',
+    sidebarCollapsed && !isMobile ? 'app-shell--collapsed' : '',
+    isMobile ? 'app-shell--mobile' : ''
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className={sidebarCollapsed ? 'app-shell app-shell--collapsed' : 'app-shell'}>
+    <div className={shellClass}>
+      {isMobile && (
+        <header className="app-shell__mobile-header">
+          <button
+            className="app-shell__mobile-menu-btn"
+            onClick={() => setMobileSidebarVisible(true)}
+            aria-label="打开菜单"
+          >
+            <Menu size={24} />
+          </button>
+          <div className="app-shell__mobile-brand">
+            <img src="/favicon.svg" alt="Logo" />
+            <span>CODEVIEW</span>
+          </div>
+          <div className="app-shell__mobile-spacer" />
+        </header>
+      )}
+
       <SidebarNavigation
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((current) => !current)}
+        mobileVisible={mobileSidebarVisible}
+        onCloseMobile={() => setMobileSidebarVisible(false)}
       />
 
       <div className="app-shell__main">

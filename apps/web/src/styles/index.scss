@@ -141,6 +141,73 @@ option {
   min-height: 100vh;
   gap: 0;
   overflow-x: clip;
+
+  &--mobile {
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+.app-shell__mobile-header {
+  flex: 0 0 56px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(6, 10, 12, 0.96);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(184, 255, 59, 0.12);
+}
+
+.app-shell__mobile-menu-btn {
+  width: 40px; 
+  height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+}
+
+.app-shell__mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.90rem;
+  letter-spacing: 0.05em;
+  color: var(--color-accent);
+
+  img {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.app-shell__mobile-spacer {
+  width: 40px;
+  flex: none;
+}
+
+.app-shell__sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .app-shell__sidebar {
@@ -157,11 +224,47 @@ option {
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0)),
     rgba(6, 10, 12, 0.92);
   backdrop-filter: blur(18px);
+  z-index: 60;
   overflow: hidden;
-  will-change: width, flex-basis;
+  will-change: width, flex-basis, transform;
   transition:
     width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    flex-basis 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    flex-basis 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &--mobile {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    flex: 0 0 280px;
+    height: 100vh;
+    height: 100dvh;
+    transform: translateX(-100%);
+    border-right: 1px solid rgba(184, 255, 59, 0.16);
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.5);
+    visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s 0.3s;
+  }
+
+  &--mobile-visible {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s 0s;
+  }
+}
+
+.app-shell__mobile-close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  color: var(--color-text-secondary);
 }
 
 .app-shell--collapsed .app-shell__sidebar {
@@ -380,7 +483,7 @@ option {
   border: 0;
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: 0.7rem;
+  font-size: 0.70rem;
   line-height: 1.45;
 }
 
@@ -409,7 +512,9 @@ option {
   min-width: 0;
   flex: 1 1 auto;
   padding: 6px 6px 8px 8px;
-  overflow-x: clip;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .app-shell--collapsed .app-shell__sidebar-nav {
@@ -491,7 +596,7 @@ option {
   top: 18px;
   right: 18px;
   z-index: 70;
-  min-width: 220px;
+  width: min(420px, calc(100vw - 24px));
   max-width: min(420px, calc(100vw - 24px));
   display: inline-flex;
   align-items: center;
@@ -622,108 +727,61 @@ option {
     white-space: nowrap;
   }
 
-  .app-shell__nav-item {
-    display: flex;
-  }
-
-  .app-shell__nav-copy {
-    display: flex;
-  }
-
   .app-shell__nav-copy small {
     display: none;
-  }
-
-  .app-shell__sidebar-card {
-    align-items: flex-start;
   }
 }
 
-@media (max-width: 1080px) {
-  .app-shell {
-    display: block;
+/* 中大屏幕：保留侧栏 */
+@media (min-width: 769px) {
+  .app-shell__main {
+    padding: 6px 6px 8px 8px;
   }
+}
 
-  .app-shell--collapsed .app-shell__sidebar {
-    width: auto;
-    flex-basis: auto;
-  }
-
+/* 移动端屏幕：抽屉侧栏 + 顶部 Header */
+@media (max-width: 768px) {
   .app-shell__sidebar {
-    position: static;
-    width: auto;
-    flex-basis: auto;
-    height: auto;
-    padding-bottom: 10px;
-    transition: none;
+    /* 已经在 .app-shell__sidebar--mobile 中处理 */
+  }
+
+  .app-shell__sidebar-head {
+    min-height: 60px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   }
 
   .app-shell__sidebar-nav {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 8px;
-  }
-
-  .app-shell--collapsed .app-shell__sidebar-nav {
-    align-items: stretch;
-    padding-top: 8px;
-  }
-
-  .app-shell__sidebar-footer {
-    display: none;
-  }
-
-  .app-shell__brand {
-    align-items: center;
-  }
-
-  .app-shell__content {
-    padding: 12px 6px 16px;
-  }
-
-  .app-shell--collapsed .app-shell__sidebar-head {
-    gap: 6px;
-    min-height: 68px;
-    padding: 14px 8px 6px 12px;
-  }
-
-  .app-shell--collapsed .app-shell__brand-copy {
-    max-width: 132px;
-    opacity: 1;
-    transform: none;
+    padding: 10px 8px;
   }
 
   .app-shell__nav-item {
-    flex-direction: column;
-    justify-content: center;
-    padding: 12px 10px;
+    min-height: 54px;
+    border-radius: 12px;
+    margin-bottom: 4px;
   }
 
-  .app-shell--collapsed .app-shell__nav-item {
-    width: 100%;
-    min-height: 52px;
-    justify-content: center;
-    gap: 10px;
-    padding: 12px 10px;
-  }
-
-  .app-shell--collapsed .app-shell__nav-item--active::before {
-    top: 10px;
-    bottom: 10px;
-  }
-
-  .app-shell__nav-copy {
-    text-align: center;
-  }
-
-  .app-shell--collapsed .app-shell__nav-copy {
-    max-width: none;
-    opacity: 1;
-    transform: none;
+  .app-shell__nav-copy strong {
+    font-size: 0.90rem;
   }
 
   .app-shell__nav-copy small {
-    display: inline;
+    display: block;
+    font-size: 0.75rem;
+  }
+
+  .app-shell__sidebar-footer {
+    display: flex;
+    padding: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .app-shell__main {
+    padding: 0;
+  }
+
+  .app-shell__content {
+    padding: 12px 12px 24px;
   }
 
   .form-grid {
@@ -731,10 +789,33 @@ option {
   }
 
   .app-toast {
-    top: 10px;
-    right: 10px;
-    left: 10px;
+    top: auto;
+    bottom: 24px;
+    left: 12px;
+    right: 12px;
+    width: auto;
     max-width: none;
+    animation-name: app-toast-enter-mobile;
+  }
+}
+
+@keyframes app-toast-enter-mobile {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 480px) {
+  .app-shell__content {
+    padding: 10px 10px 20px;
+  }
+
+  .section-actions {
+    flex-direction: column;
+    width: 100%;
+    
+    button {
+      width: 100%;
+    }
   }
 }
 

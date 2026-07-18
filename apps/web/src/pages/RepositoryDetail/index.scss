@@ -733,7 +733,8 @@
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
-  gap: 8px;
+  gap: 16px;
+  min-width: 0;
   --repo-detail-heatmap-cell-width: 9px;
   --repo-detail-heatmap-cell-height: 10px;
   --repo-detail-heatmap-cell-gap: 3px;
@@ -792,21 +793,20 @@
 }
 
 .repo-detail-heatmap__body {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 10px;
+  display: flex;
+  gap: 12px;
   padding: 4px 0 0;
+  min-width: 0;
 }
 
 .repo-detail-heatmap__weekdays {
   display: grid;
-  grid-template-rows: repeat(7, var(--repo-detail-heatmap-cell-height));
-  gap: 4px;
-  color: #7c877b;
-  font-size: 0.62rem;
-  justify-items: start;
-  line-height: 1;
-  padding-top: 2px;
+  grid-template-rows: repeat(7, 10px);
+  gap: 3px;
+  padding-top: 20px;
+  color: rgba(154, 148, 136, 0.65);
+  font-size: 0.64rem;
+  text-align: right;
 }
 
 .repo-detail-heatmap__weekdays span {
@@ -824,16 +824,16 @@
 .repo-detail-heatmap__main {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-width: 0;
   overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 2px;
+  padding-bottom: 8px;
   scrollbar-width: thin;
   scrollbar-color: rgba(184, 255, 59, 0.28) rgba(255, 255, 255, 0.04);
 }
 
 .repo-detail-heatmap__main::-webkit-scrollbar {
-  height: 6px;
+  height: 4px;
 }
 
 .repo-detail-heatmap__main::-webkit-scrollbar-track {
@@ -854,10 +854,9 @@
 
 .repo-detail-heatmap__grid {
   display: grid;
-  grid-template-columns: repeat(53, var(--repo-detail-heatmap-cell-width));
-  grid-template-rows: repeat(7, var(--repo-detail-heatmap-cell-height));
-  gap: var(--repo-detail-heatmap-cell-gap);
-  width: max-content;
+  grid-template-rows: repeat(7, 10px);
+  grid-auto-flow: column;
+  gap: 3px;
 }
 
 .repo-detail-heatmap__cell {
@@ -869,21 +868,16 @@
 }
 
 .repo-detail-heatmap__months {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  align-items: start;
+  display: flex;
   height: 14px;
-  margin-top: 12px;
-  width: 100%;
-  color: #7c877b;
-  font-size: 0.62rem;
-  letter-spacing: 0.02em;
+  color: rgba(154, 148, 136, 0.6);
+  font-size: 0.64rem;
+  position: relative;
 }
 
 .repo-detail-heatmap__months span {
-  text-align: center;
+  position: absolute;
   white-space: nowrap;
-  line-height: 1;
 }
 
 .repo-detail-heatmap__footer {
@@ -1350,17 +1344,10 @@
   background: transparent;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1280px) {
   .repo-detail-grid--primary,
   .repo-detail-grid--secondary {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 1180px) {
-  .repo-detail-hero__actions {
-    flex-wrap: wrap;
-    justify-content: flex-start;
   }
 
   .repo-detail-hero__body {
@@ -1370,6 +1357,9 @@
   .repo-detail-hero__meta,
   .repo-detail-hero__score {
     padding-left: 0;
+    padding-right: 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .repo-detail-hero__meta::before,
@@ -1377,26 +1367,69 @@
     display: none;
   }
 
-  .repo-detail-hero__overview,
-  .repo-detail-hero__meta,
-  .repo-detail-hero__score {
+  .repo-detail-hero__overview {
     padding-right: 0;
   }
+}
 
-  .repo-detail-hero__meta,
-  .repo-detail-hero__score {
-    padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+@media (max-width: 1180px) {
+  .repo-detail-hero__actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .repo-detail-panel--stack .repo-detail-panel__mini-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .repo-detail-panel--stack .repo-detail-panel__mini-tab {
+    min-width: 0;
+    padding-inline: 8px;
+    white-space: normal;
   }
 }
 
 @media (max-width: 980px) {
+  .repo-detail-panel--heatmap .panel-heading__side,
+  .repo-detail-panel--stack .panel-heading__side,
+  .repo-detail-panel--insights .panel-heading__side {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .repo-detail-hero__field-list,
   .repo-detail-hero__score-card,
   .repo-detail-trend,
-  .repo-detail-stack__top,
   .repo-detail-traffic__metrics {
     grid-template-columns: 1fr;
+  }
+
+  .repo-detail-trend__metrics {
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 10px;
+  }
+
+  .repo-detail-stack__top {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .repo-detail-stack__chart {
+    width: 100%;
+    max-width: none;
+    height: 180px;
+  }
+
+  .repo-detail-stack__legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    padding-left: 0;
+    gap: 12px;
   }
 
   .repo-detail-heatmap__body {
@@ -1430,6 +1463,30 @@
 
   .repo-detail-hero__score-card {
     padding: 14px;
+  }
+
+  .repo-detail-panel {
+    padding: 14px;
+  }
+
+  .repo-detail-stack__legend {
+    grid-template-columns: 1fr;
+  }
+
+  .repo-detail-panel__tab-group,
+  .repo-detail-panel__mode-tabs {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .repo-detail-panel--trend .repo-detail-panel__tab,
+  .repo-detail-panel--insights .repo-detail-panel__mode-tab {
+    flex: 1 1 0;
+  }
+
+  .repo-detail-panel__tab {
+    padding: 0 12px;
+    font-size: 0.8rem;
   }
 
   .repo-detail-heatmap {
