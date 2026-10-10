@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { env } from '@/config/env';
 import { db } from '@/database/client';
-import { fetchGitHubUser } from '@/modules/sync/github.client';
+import { tryFetchGitHubUser } from '@/modules/sync/github.client';
 import { createCsrfToken, decryptValue, encryptValue, escapeHtml, unescapeHtml } from '@/utils/security';
 import { DEFAULT_TIMEZONE, resolveTimezone } from '@/utils/time';
 import { logger } from '@/utils/logger';
@@ -309,25 +309,60 @@ export function listSyncScheduleConfigs(): SyncScheduleConfig[] {
     .all() as SyncScheduleConfig[];
 }
 
-/* 服务首次启动时，可将环境变量中的管理员 GitHub 配置导入到默认用户空间。 */
-export async function bootstrapOwnerConfigFromEnv(userId: string): Promise<void> {
+export interface OwnerConfigBootstrapResult {
+  /** 是否从环境变量完成了一次 GitHub 配置导入 */
+  imported: boolean;
+  /** 是否因数据库中的 Token 已失效而执行了自动替换 */
+  tokenRefreshed: boolean;
+}
+
+/* 判断数据库中已保存的 Token 当前是否可用：未保存、解密失败或凭证失效都视为不可用。 */
+async function isStoredTokenUsable(userId: string): Promise<boolean> {
+  let storedToken: string | null;
+
+  try {
+    storedToken = getDecryptedToken(userId);
+  } catch {
+    return false;
+  }
+
+  if (!storedToken) {
+    return false;
+  }
+
+  return (await tryFetchGitHubUser(storedToken)) !== null;
+}
+
+/* 服务启动时按需导入管理员 GitHub 配置：库内没有 Token，或库内 Token 已失效且环境变量提供了有效 Token 时执行导入。 */
+export async function bootstrapOwnerConfigFromEnv(userId: string): Promise<OwnerConfigBootstrapResult> {
   ensureConfig(userId);
 
   if (!env.githubToken) {
-    return;
+    return { imported: false, tokenRefreshed: false };
   }
 
   const existingConfig = getConfig(userId, true);
+  const shouldRefreshInvalidToken = existingConfig.hasToken;
 
-  if (existingConfig.hasToken) {
-    return;
+  /* 库内 Token 仍然可用时不做覆盖，避免冲掉配置中心保存的凭证。 */
+  if (shouldRefreshInvalidToken && (await isStoredTokenUsable(userId))) {
+    return { imported: false, tokenRefreshed: false };
   }
 
-  const githubUsername = (await fetchGitHubUser(env.githubToken)).login;
+  /* 环境变量中的 Token 必须先通过校验，避免把失效凭证写入数据库。 */
+  const githubIdentity = await tryFetchGitHubUser(env.githubToken);
+
+  if (!githubIdentity) {
+    logger.error('环境变量中的 GitHub Token 校验未通过，已跳过自动导入', {
+      userId
+    });
+
+    return { imported: false, tokenRefreshed: false };
+  }
 
   saveConfig({
     userId,
-    githubUsername,
+    githubUsername: githubIdentity.login,
     githubToken: env.githubToken,
     emailAliases: existingConfig.emailAliases,
     includePrivateRepos: env.githubIncludePrivateRepos,
@@ -341,9 +376,21 @@ export async function bootstrapOwnerConfigFromEnv(userId: string): Promise<void>
     timezone: existingConfig.timezone
   });
 
+  if (shouldRefreshInvalidToken) {
+    /* 生产环境日志级别下只有错误会输出，此处属于需要线上可见的自愈事件。 */
+    logger.error('检测到数据库中的 GitHub Token 已失效，已自动替换为环境变量中的 Token', {
+      userId,
+      githubUsername: githubIdentity.login
+    });
+
+    return { imported: true, tokenRefreshed: true };
+  }
+
   logger.info('已从环境变量完成默认管理员 GitHub 配置导入', {
     userId,
-    githubUsername,
+    githubUsername: githubIdentity.login,
     includePrivateRepos: env.githubIncludePrivateRepos
   });
+
+  return { imported: true, tokenRefreshed: false };
 }

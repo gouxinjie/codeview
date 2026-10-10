@@ -1,6 +1,6 @@
 import { escapeHtml } from '@/utils/security';
 
-interface GitHubUserResponse {
+export interface GitHubUserResponse {
   login: string;
 }
 
@@ -86,6 +86,15 @@ async function requestGitHub<T>(token: string, path: string): Promise<T> {
 /* 拉取当前 Token 对应的 GitHub 用户信息。 */
 export async function fetchGitHubUser(token: string): Promise<GitHubUserResponse> {
   return requestGitHub<GitHubUserResponse>(token, '/user');
+}
+
+/* 校验 Token 是否可用：可用时返回对应 GitHub 用户信息，凭证失效或请求异常时返回 null，不向上抛出错误。 */
+export async function tryFetchGitHubUser(token: string): Promise<GitHubUserResponse | null> {
+  try {
+    return await fetchGitHubUser(token);
+  } catch {
+    return null;
+  }
 }
 
 /* 拉取 GitHub 仓库列表，并按更新时间降序返回。 */

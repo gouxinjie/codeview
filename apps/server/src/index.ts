@@ -30,13 +30,35 @@ function bootstrapInitialSync(userId: string): void {
   }
 }
 
+/* 库内 Token 因失效被自动替换后，补一轮全量同步，避免线上数据长期停留在旧状态。 */
+function bootstrapTokenRefreshSync(userId: string): void {
+  try {
+    startSyncGitHubData({
+      userId,
+      mode: 'full'
+    });
+
+    logger.info('检测到 GitHub Token 已完成自动替换，已启动全量同步', {
+      userId
+    });
+  } catch (error) {
+    logger.error('GitHub Token 替换后的自动同步启动失败，服务将继续运行', {
+      userId,
+      message: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+}
+
 async function bootstrap(): Promise<void> {
   const app = createApp();
 
   ensureConfig(env.defaultUserId);
 
+  let tokenRefreshed = false;
+
   try {
-    await bootstrapOwnerConfigFromEnv(env.defaultUserId);
+    const bootstrapResult = await bootstrapOwnerConfigFromEnv(env.defaultUserId);
+    tokenRefreshed = bootstrapResult.tokenRefreshed;
   } catch (error) {
     logger.error('默认管理员 GitHub 配置自动导入失败，服务将继续启动', {
       userId: env.defaultUserId,
@@ -46,6 +68,10 @@ async function bootstrap(): Promise<void> {
 
   initializeSchedules();
   bootstrapInitialSync(env.defaultUserId);
+
+  if (tokenRefreshed) {
+    bootstrapTokenRefreshSync(env.defaultUserId);
+  }
 
   app.listen(env.serverPort, () => {
     logger.info('CodeView server started', {
