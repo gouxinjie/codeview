@@ -57,6 +57,8 @@ jobs:
           context: .
           file: apps/server/Dockerfile
           push: true
+          # 阿里云 ACR 个人版不支持 OCI attestation 空清单，关闭 provenance 以避免推送失败
+          provenance: false
           tags: |
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/server:${{ github.sha }}
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/server:latest
@@ -67,6 +69,8 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           push: true
+          # 阿里云 ACR 个人版不支持 OCI attestation 空清单，关闭 provenance 以避免推送失败
+          provenance: false
           tags: |
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/web:${{ github.sha }}
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/web:latest
